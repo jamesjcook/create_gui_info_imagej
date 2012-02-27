@@ -13,10 +13,15 @@ debuglevel=50;
 arglist=getArgument();
 arglist=split(arglist," ");
 hostname=arglist[0];
-if(lengthOf(arglist)>1)
-    {}
-Array.print(arglist);
-exit();
+if(lengthOf(arglist)>1) {
+    scanner=arglist[1];
+    if(lengthOf(arglist)>=2) { param_file_name=arglist[2]; }
+    else { param_file_name="create_gui_info_imagej_lastsettings.param"; }
+}
+if(debuglevel>=70) {
+    print("scanner:         "+scanner);
+    print("param_file_name: "+param_file_name);
+}
 ////
 // radish settings to get relevant info for script.
 ////
@@ -88,28 +93,55 @@ if ( debuglevel >= 45 ) {
     print("engine_work_directory:               "+engine_work_directory);
     print("engine_archive_tag_directory:        "+engine_archive_tag_directory);
     }
+//recon_menu.txt
+reconmenucomments="";
+if(File.exists(""+engine_recongui_menu_path)) {
+    reconmenu=File.openAsString(""+engine_recongui_menu_path);
+    reconmenu=split(reconmenu,"\n");
+    //// n4eed too think more about how to parse this....
+    // something like, while line is not a comment, 
+    // when line startw with allmenuttypes, 
+    // for each menu type....
+    // build an array of strings... to split up later. 
+    // complicated... 
+    
+	for(linenum=0;linenum<reconmenu.length;linenum++)
+	    {
+		line=reconmenu[linenum];
+		temp=split(line,";");
+		if (startsWith(line,"#")) { reconmenucomment=""+reconmenucomment+"\n"+line; }
+		else if (matches(line,".*TYPE.*")){ 
+		    if(startsWith(line,"ALLMENUTYPES")) { 
+			print("found all expected type line: "+line);
+		    } else {
+		    type=temp[1];
+		    print("found type line starting section "+type); 
+		    }
+		}
+		else if (startsWith(line,"test")) { test=temp[1]; }
+		
+		else {
+		    if ( debuglevel >= 70 ) { print(""+line); }
+		}
+	    }
+} else {
+    exit("ERROR could not find recon_menu file "+engine_recongui_menu_path);
+}
+exit();
 // Load Vars saved last time
 //getDateAndTime(year, month, dayOfWeek, dayOfMonth, hour, minute, second, msec) 
 previous_param_file_name="create_gui_info_imagej_lastsettings.param"; // last settings param/headfile.
-previous_param_file=engine_recongui_paramfile_directory+"/"+previous_param_file_name);
-
-exit;
-plugindir=getDirectory("plugins");// probably want the settings directory to be someplace other than there... good dir might be in recon home someplace, 
-// /Volumes/recon_home/dir_param_files
-//engine_recongui_paramfile_directory=/Volumes/recon_home/dir_param_files
-
-//settingsdir=
+previous_param_file=engine_recongui_paramfile_directory+"/"+previous_param_file_name;
 
 if(File.exists(previous_param_file))
   {
       if ( debuglevel >=35 ){ print("Found Previous vars in file "+previous_param_file); }
-    paramsettings=File.openAsString(previous_param_file);
-    paramsettings=split(previousvars,"\n");
-    ////
-    // For loop to pull variables, might be nice to do this based on a var list to make it more general
-    ////
-    // eg.  foreach (var in varlist )       if(startsWith(previousvarlines[i],var) ) {      temp=split(previousvarlines[i]);        ""+var+""=temp[1];}
-    for(linenum=0;linenum<paramsettings.length;linenum++) {
+      paramsettings=File.openAsString(previous_param_file);
+      paramsettings=split(previousvars,"\n");
+      ////
+      // For loop to pull variables, might be nice to do this based on a var list to make it more general
+      ////
+      for(linenum=0;linenum<paramsettings.length;linenum++) {
 	line=enginesettings[linenum];
 	temp=split(line,"=");
 	if(startsWith(line,"minrunnumber") ) { minrunnumber=temp[1]; }
@@ -131,95 +163,27 @@ if(File.exists(previous_param_file))
 	else { }
     }
   }
-
-studypath=studypath+"/"+study+"/";
-
-minrunnumber=parseInt(minrunnumber);
-maxrunnumber=parseInt(maxrunnumber);
+else {
+    print("No previous param file found at "+previous_param_file);
+}
 
 
 
-fullminrunnumber=""+modality+"";
-while(lengthOf(fullminrunnumber)<numzeroes)	{      fullminrunnumber=fullminrunnumber+"0";	   }
-fullminrunnumber=""+fullminrunnumber+""+minrunnumber+"";//next while handles the case where we run out of zeroes, eg we go from a 3digit fullminrunnumber to a 4.
-while(lengthOf(fullminrunnumber)!=runnumchars)
-  {
-    //fullminrunnumber=""+modality+"";
-    if(lengthOf(fullminrunnumber)>runnumchars)
-      {
-	fullminrunnumber=""+modality+"";
-	numzeroes--;
-      }
-    while(lengthOf(fullminrunnumber)<numzeroes)
-      {
-	fullminrunnumber=fullminrunnumber+"0";
-      }
-    fullminrunnumber=""+fullminrunnumber+""+minrunnumber+"";
-  }
-minrunnumber=substring(fullminrunnumber,1);
-minrunnumber=parseInt(minrunnumber);
-print(fullminrunnumber);
-
-fullmaxrunnumber=""+modality+"";
-while(lengthOf(fullmaxrunnumber)<numzeroes)	{      fullmaxrunnumber=fullmaxrunnumber+"0";	   }
-fullmaxrunnumber=""+fullmaxrunnumber+""+maxrunnumber+"";//next while handles the case where we run out of zeroes, eg we go from a 3digit fullmaxrunnumber to a 4.
-while(lengthOf(fullmaxrunnumber)!=runnumchars)
-  {
-    //fullmaxrunnumber=""+modality+"";
-    if(lengthOf(fullmaxrunnumber)>runnumchars)
-      {
-	fullmaxrunnumber=""+modality+"";
-	numzeroes--;
-      }
-    while(lengthOf(fullmaxrunnumber)<numzeroes)
-      {
-	fullmaxrunnumber=fullmaxrunnumber+"0";
-      }
-    fullmaxrunnumber=""+fullmaxrunnumber+""+maxrunnumber+"";
-  }
-maxrunnumber=substring(fullmaxrunnumber,1);
-maxrunnumber=parseInt(maxrunnumber);
-print(fullmaxrunnumber);
-
-fullminspecid=""+specidbase+"-"+minspecid+":"+specidpiece+"";
-fullmaxspecid=""+specidbase+"-"+maxspecid+":"+specidpiece+"";
-//minspecid=substring(fullminspecid,indexOf(fullminspecid,"-")+1,indexOf(fullminspecid,":"));
-//maxspecid=substring(fullmaxspecid,indexOf(fullmaxspecid,"-")+1,indexOf(fullmaxspecid,":"));
-print(fullminspecid);
-print(fullmaxspecid);
-
-Dialog.create("Open Novartis PET data");
-Dialog.addMessage(""+studypath+"");
-Dialog.addString("Study Directory:",studypath)
-Dialog.addMessage("Enter in the starting and stopping run number below");
-Dialog.addString("Start runnumber: ",fullminrunnumber);
-Dialog.addString("End runnumber: ",fullmaxrunnumber);
-Dialog.addMessage("Enter in the beginning and ending animal id's below");
-Dialog.addString("Minspecimenid: ",fullminspecid);
-Dialog.addString("Maxspecimenid: ",fullmaxspecid);
-Dialog.addCheckbox("inarchive?",isinarchive);
-Dialog.addCheckbox("researchdata?",isresearchdata);
+exit;
+Dialog.create("IMAGEJ: create_recon_gui");
+Dialog.addString("");
+Dialog.addString("");
+Dialog.addString("");
+Dialog.addString("");
+Dialog.addString("");
+Dialog.addString("");
+Dialog.addString("");
+Dialog.addString("");
+Dialog.addString("");
+Dialog.addString("");
+Dialog.addString("");
+Dialog.addString("");
 Dialog.show();
-studypath=Dialog.getString();
-fullminrunnumber=Dialog.getString();
-minrunnumber=substring(fullminrunnumber,1);
-minrunnumber=parseInt(minrunnumber);
-fullmaxrunnumber=Dialog.getString();
-maxrunnumber=substring(fullmaxrunnumber,1);
-maxrunnumber=parseInt(maxrunnumber);
-fullminspecid=Dialog.getString();
-specidbase=substring(fullminspecid,0,indexOf(fullmaxspecid,"-"));
-minspecid=substring(fullminspecid,indexOf(fullminspecid,"-")+1,indexOf(fullminspecid,":"));
-fullmaxspecid=Dialog.getString();
-maxspecid=substring(fullmaxspecid,indexOf(fullmaxspecid,"-")+1,indexOf(fullmaxspecid,":"));
-isinarchive=Dialog.getCheckbox();
-isresearchdata=Dialog.getCheckbox();
-
-print(specidbase);
-print(minspecid);
-print(maxspecid);
-print(minrunnumber);
-print(maxrunnumber);
 
 /////
 // save vars to file here.
