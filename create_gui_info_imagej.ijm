@@ -1,6 +1,22 @@
+////////////////////////////////////////////////////////////////////////////////
+// Create_gui_info_imagej 
+// Planed to be a feature compatabile drop in replacement for the 
+// create_gui_info tcl  gui for radish
+// Imagej chosen for cross platform compatabiltiy, and minimal install size
+// 
+// should emulate create_gui_info as completely as possible. hopefully down to 
+// bug compatability
+////////////////////////////////////////////////////////////////////////////////
 
 debuglevel=50;
-hostname=getArgument();
+// expects 3 arguments in order, hostname scanner paramfile 
+arglist=getArgument();
+arglist=split(arglist," ");
+hostname=arglist[0];
+if(lengthOf(arglist)>1)
+    {}
+Array.print(arglist);
+exit();
 ////
 // radish settings to get relevant info for script.
 ////
@@ -58,73 +74,68 @@ if(File.exists(""+enginesettingsfile))
 		else if (startsWith(line,"engine_recongui_menu_path")) { engine_recongui_menu_path=temp[1]; }
 		//engine_archive_tag_directory;
 		else if (startsWith(line,"engine_archive_tag_directory")) { engine_archive_tag_directory=temp[1]; }
+		else { 
+		    if ( debuglevel >= 70 ) { print(""+line); }
+		}
 	    }	
+    } else {
+	exit("ERROR could not find enginesetting file "+enginesettingsfile);
     }
-else
-    {
-	print("ERROR could not find enginesetting file "+enginesettingsfile+"\n");
-	run("Quit");
-	exit("ERROR could not find enginesetting file "+enginesettingsfile+"\n");
-
-
-    }
+print ("");
 if ( debuglevel >= 45 ) {
-    print("engine_recongui_paramfile_directory: "+engine_recongui_paramfile_directory+"\n");
-    print("engine_recongui_menu_path:           "+engine_recongui_menu_path+"\n");
-    print("engine_work_directory:               "+engine_work_directory+"\n");
-    print("engine_archive_tag_directory:        "+engine_archive_tag_directory+"\n");
+    print("engine_recongui_paramfile_directory: "+engine_recongui_paramfile_directory);
+    print("engine_recongui_menu_path:           "+engine_recongui_menu_path);
+    print("engine_work_directory:               "+engine_work_directory);
+    print("engine_archive_tag_directory:        "+engine_archive_tag_directory);
     }
 // Load Vars saved last time
-exit;
+//getDateAndTime(year, month, dayOfWeek, dayOfMonth, hour, minute, second, msec) 
+previous_param_file_name="create_gui_info_imagej_lastsettings.param"; // last settings param/headfile.
+previous_param_file=engine_recongui_paramfile_directory+"/"+previous_param_file_name);
 
+exit;
 plugindir=getDirectory("plugins");// probably want the settings directory to be someplace other than there... good dir might be in recon home someplace, 
 // /Volumes/recon_home/dir_param_files
 //engine_recongui_paramfile_directory=/Volumes/recon_home/dir_param_files
 
 //settingsdir=
-persistentvarfilename="create_gui_info_imagej_lastsettings.param"; // last settings param/headfile.
-if(File.exists(""+plugindir+"persistentvars/"+persistentvarfilename))
+
+if(File.exists(previous_param_file))
   {
-    print("Found Previous vars in file "+plugindir+"persistentvars/"+persistentvarfilename);
-    previousvars=File.openAsString(""+plugindir+"persistentvars/"+persistentvarfilename);
-    previousvarlines=split(previousvars,"\n");
+      if ( debuglevel >=35 ){ print("Found Previous vars in file "+previous_param_file); }
+    paramsettings=File.openAsString(previous_param_file);
+    paramsettings=split(previousvars,"\n");
     ////
     // For loop to pull variables, might be nice to do this based on a var list to make it more general
     ////
     // eg.  foreach (var in varlist )       if(startsWith(previousvarlines[i],var) ) {      temp=split(previousvarlines[i]);        ""+var+""=temp[1];}
-    for(i=0;i<previousvarlines.length;i++)
-      {
-	if(startsWith(previousvarlines[i],"minrunnumber:") )
-	  {
-	    temp=split(previousvarlines[i]);
-	    print(temp[1]);
-	    minrunnumber=temp[1];
-	  }
-	if(startsWith(previousvarlines[i],"study:") )
-	  {
-	    temp=split(previousvarlines[i]);
-	    print(temp[1]);
-	    study=temp[1];
-	  }
-      }
+    for(linenum=0;linenum<paramsettings.length;linenum++) {
+	line=enginesettings[linenum];
+	temp=split(line,"=");
+	if(startsWith(line,"minrunnumber") ) { minrunnumber=temp[1]; }
+	else if (startsWith(line,"civmid") ) { civmid=temp[1]; }
+	else if (startsWith(line,"coil") ) { coil=temp[1]; }
+	else if (startsWith(line,"focus") ) { focus=temp[1]; }
+	else if (startsWith(line,"hfpmcnt") ) { hfpmcnt=temp[1]; }
+	else if (startsWith(line,"nucleus") ) { nucleus=temp[1]; }
+	else if (startsWith(line,"optional") ) { optional=temp[1]; }
+	else if (startsWith(line,"orient") ) { orient=temp[1]; }
+	else if (startsWith(line,"rplane") ) { rplane=temp[1]; }
+	else if (startsWith(line,"specid") ) { specid=temp[1]; }
+	else if (startsWith(line,"species") ) { species=temp[1]; }
+	else if (startsWith(line,"state") ) { state=temp[1]; }
+	else if (startsWith(line,"status") ) { status=temp[1]; }
+	else if (startsWith(line,"type") ) { type=temp[1]; }
+	else if (startsWith(line,"xmit") ) { xmit=temp[1]; }
+	else if (startsWith(line,"text") ) { text=temp[1]; }
+	else { }
+    }
   }
 
 studypath=studypath+"/"+study+"/";
-//wait(500);
-//parseint on relevent vars just in case
-//if(lowmem!=true && lowmem!=false)
-//if(lengthOf(minspecid<1))
-minspecid=parseInt(minspecid);
-//if(lengthOf(maxspecid<1))
-maxspecid=parseInt(maxspecid);
-//if(lengthOf(specidbase<1))
-//if(lengthOf(specidpiece<1))
-specidpiece=parseInt(specidpiece);
-//if(lengthOf(minrunnumber<1))
+
 minrunnumber=parseInt(minrunnumber);
-//if(lengthOf(maxrunnumber<1))
 maxrunnumber=parseInt(maxrunnumber);
-//if(lengthOf(study<1))
 
 
 
