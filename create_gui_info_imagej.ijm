@@ -1,19 +1,25 @@
-//macro to check images either in the archive or on the petsystem
+
+
+debug=50;
+////
+// radish settings to get relevant info for script.
+////
+enginesettingsfile=/recon_home/script/dir_radish/engine_naxos_radish_dependencies;
+
+////
+// handle multi-platform troubles
+////
+// detect windows or mac environmet and modify settings accordingly, 
+// detect if we're on zeiss or not.
+
 
 ////
 // option vars
 ////
-isinarchive=false;
-isresearchdata=false;
 
 ////
-// specid vars init
+// load instructions for display at top of the dialog box.
 ////
-minspecid=0;
-maxspecid=3;
-specidbase="090814";
-specidpiece=0;
-specid=minspecid;
 
 ////
 // runnumber var's init
@@ -21,24 +27,54 @@ specid=minspecid;
 minrunnumber=740;
 maxrunnumber=760;
 runnumdigits=minrunnumber;
-runnumberpattern="M00000";
+runnumberpattern="Z00000";// should get this from a setting file so its relatively easy to expand. 
 runnumchars=lengthOf(runnumberpattern);
 modality=substring(runnumberpattern,0,1);
 modality=toUpperCase(modality);
 
-//numzeroes=indexOf(runnumber,runnumdigits); //this doesnt work here unless the runnumber is givencompletely.
 numzeroes=lengthOf(runnumberpattern)-lengthOf(toString(minrunnumber));
 
-//studypath="/Volumes/petspace/09_novartis_04/";
 study="James Cook/";
 studypath="/mnt/shares/petspace/";
 
 
 ////
-// Load Vars saved last time
+// Load files
 ////
-plugindir=getDirectory("plugins");
-persistentvarfilename="PET_Examineimages.txt";
+//radish settings
+if(File.exists(""+enginesettingsfile))
+    {
+	enginesettings=File.openAsString(""+enginesettingsfile);	
+	enginesettings=split(enginesettings,"\n");
+	for(linenum=0;linenum<enginesettings.length;linenum++)
+	    {
+		line=enginesettings[linenum];
+		temp=split(line,"=");
+		//engine_work_directory;
+		if(startsWith(line,"engine_work_directory")) { engine_work_directory=temp[1]; }
+		//engine_recongui_paramfile_directory;
+		else if (startsWith(line,"engine_recongui_paramfile_directory")) { engine_recongui_paramfile_directory=temp[1]; } 
+		//engine_recongui_menu_path;
+		else if (startsWith(line,"engine_recongui_menu_path")) { engine_recongui_menu_path=temp[1]; }
+		//engine_archive_tag_directory;
+		else if (startsWith(line,"engine_archive_tag_directory")) { engine_archive_tag_directory=temp[1]; }
+	    }	
+    }
+if ( debug >= 45 ) {
+    print("engine_recongui_paramfile_directory: "+engine_recongui_paramfile_directory+"\n");
+    print("engine_recongui_menu_path:           "+engine_recongui_menu_path+"\n");
+    print("engine_work_directory:               "+engine_work_directory+"\n");
+    print("engine_archive_tag_directory:        "+engine_archive_tag_directory+"\n");
+    }
+// Load Vars saved last time
+exit;
+
+plugindir=getDirectory("plugins");// probably want the settings directory to be someplace other than there... good dir might be in recon home someplace, 
+// /Volumes/recon_home/dir_param_files
+//engine_recongui_paramfile_directory=/Volumes/recon_home/dir_param_files
+
+//settingsdir=
+persistentvarfilename="create_gui_info_imagej_lastsettings.param"; // last settings param/headfile.
 if(File.exists(""+plugindir+"persistentvars/"+persistentvarfilename))
   {
     print("Found Previous vars in file "+plugindir+"persistentvars/"+persistentvarfilename);
@@ -50,83 +86,17 @@ if(File.exists(""+plugindir+"persistentvars/"+persistentvarfilename))
     // eg.  foreach (var in varlist )       if(startsWith(previousvarlines[i],var) ) {      temp=split(previousvarlines[i]);        ""+var+""=temp[1];}
     for(i=0;i<previousvarlines.length;i++)
       {
-	if(startsWith(previousvarlines[i],"lowmem:") )
-	  {
-	    temp=split(previousvarlines[i]);
-	    print(temp[1]);
-	    lowmem=temp[1];
-	  }
-	if(startsWith(previousvarlines[i],"minspecid:") )
-	  {
-	    temp=split(previousvarlines[i]);
-	    print(temp[1]);
-	    minspecid=temp[1];
-	  }
-	if(startsWith(previousvarlines[i],"maxspecid:") )
-	  {
-	    temp=split(previousvarlines[i]);
-	    print(temp[1]);
-	    maxspecid=temp[1];
-	  }
-	if(startsWith(previousvarlines[i],"specidbase:") )
-	  {
-	    temp=split(previousvarlines[i]);
-	    print(temp[1]);
-	    specidbase=temp[1];
-	  }
-	if(startsWith(previousvarlines[i],"specidpiece:") )
-	  {
-	    temp=split(previousvarlines[i]);
-	    print(temp[1]);
-	    specidpiece=temp[1];
-	  }
 	if(startsWith(previousvarlines[i],"minrunnumber:") )
 	  {
 	    temp=split(previousvarlines[i]);
 	    print(temp[1]);
 	    minrunnumber=temp[1];
 	  }
-	if(startsWith(previousvarlines[i],"maxrunnumber:") )
-	  {
-	    temp=split(previousvarlines[i]);
-	    print(temp[1]);
-	    maxrunnumber=temp[1];
-	  }
 	if(startsWith(previousvarlines[i],"study:") )
 	  {
 	    temp=split(previousvarlines[i]);
 	    print(temp[1]);
 	    study=temp[1];
-	  }
-	if(startsWith(previousvarlines[i],"studypath:") )
-	  {
-	    temp=split(previousvarlines[i]);
-	    print(temp[1]);
-	    studypath=temp[1];
-	  }
-	if(startsWith(previousvarlines[i],"resultdir:") )
-	  {
-	    temp=split(previousvarlines[i]);
-	    print(temp[1]);
-	    resultdir=temp[1];
-	  }
-	if(startsWith(previousvarlines[i],"useoldroi:") )
-	  {
-	    temp=split(previousvarlines[i]);
-	    print(temp[1]);
-	    useoldroi=temp[1];
-    	  }
-	if(startsWith(previousvarlines[i],"isinarchive:") )
-	  {
-	    temp=split(previousvarlines[i]);
-	    print(temp[1]);
-	    isinarchive=temp[1];
-	  }
-	if(startsWith(previousvarlines[i],"isresearchdata:") )
-	  {
-	    temp=split(previousvarlines[i]);
-	    print(temp[1]);
-	    isresearchdata=temp[1];
 	  }
       }
   }

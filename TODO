@@ -1,0 +1,6 @@
+=Todo list for create_gui_info_imagej=
+
+   * edit TODO list
+   * write decent instructions
+   * write code to load these instructions when running the file and display them to the user
+   * write code to read the file format for the current create_gui_info and figure out how to load thatand use it to build the current options.
