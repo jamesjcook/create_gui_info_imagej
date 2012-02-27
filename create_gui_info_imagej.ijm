@@ -1,10 +1,10 @@
 
-
-debug=50;
+debuglevel=50;
+hostname=getArgument();
 ////
 // radish settings to get relevant info for script.
 ////
-enginesettingsfile=/recon_home/script/dir_radish/engine_naxos_radish_dependencies;
+enginesettingsfile="/recon_home/script/dir_radish/engine_"+hostname+"_radish_dependencies";
 
 ////
 // handle multi-platform troubles
@@ -60,7 +60,15 @@ if(File.exists(""+enginesettingsfile))
 		else if (startsWith(line,"engine_archive_tag_directory")) { engine_archive_tag_directory=temp[1]; }
 	    }	
     }
-if ( debug >= 45 ) {
+else
+    {
+	print("ERROR could not find enginesetting file "+enginesettingsfile+"\n");
+	run("Quit");
+	exit("ERROR could not find enginesetting file "+enginesettingsfile+"\n");
+
+
+    }
+if ( debuglevel >= 45 ) {
     print("engine_recongui_paramfile_directory: "+engine_recongui_paramfile_directory+"\n");
     print("engine_recongui_menu_path:           "+engine_recongui_menu_path+"\n");
     print("engine_work_directory:               "+engine_work_directory+"\n");
