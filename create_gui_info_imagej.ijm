@@ -6,6 +6,16 @@
 // 
 // should emulate create_gui_info as completely as possible. hopefully down to 
 // bug compatability
+//   
+// sally's recon_interface echos everything back to the console to pass its 
+// input to perl, this is how this script should operate when called the same 
+// way as hers... well shit. 
+// what i've made here is too smart, it should only take the recon_menu and 
+// the scanner_tesla, optionally it should take a paramfilename in which we will 
+// save stuff, 
+//
+// TRICKS AND LIES!, sally calls recon_interface.tcl directly from 2 places, 
+// radish.perl! and create_paramfile.perl!
 ////////////////////////////////////////////////////////////////////////////////
 
 debuglevel=50;
@@ -15,8 +25,9 @@ arglist=split(arglist," ");
 hostname=arglist[0];
 if(lengthOf(arglist)>1) {
     scanner=arglist[1];
-    if(lengthOf(arglist)>=2) { param_file_name=arglist[2]; }
-    else { param_file_name="create_gui_info_imagej_lastsettings.param"; }
+    if(lengthOf(arglist)>=3) { previous_`param_file_name=arglist[2]; }
+    else { previous_param_file_name="create_gui_info_imagej_lastsettings_"+scanner+".param"; }
+    //previous_param_file_name="create_gui_info_imagej_lastsettings"+scanner+".param"; // last settings param/headfile.
 }
 if(debuglevel>=70) {
     print("scanner:         "+scanner);
@@ -95,99 +106,267 @@ if ( debuglevel >= 45 ) {
     }
 //recon_menu.txt
 reconmenucomments="";
+menuliststring="";        // semi-colon seperated string for each menuname type.
+// these arrays cant be set until we know how many menunames we have, we find that out once we read ALLMENUTYPES
+menulistelementsarray=""; // array of semi-colon seperated strings, one array element per menuname item
+menuvalarray="";          // array of strings, the previous and curretn selected values for each menutname item
+specidpattern="[0-9]{6}-[0-9]*:[0-9]*";
+specid="000000-1:0";
+xmit=0;
+optional="";
+largestvariablenamelength=0;//setting to be used latter to make display pretty
 if(File.exists(""+engine_recongui_menu_path)) {
     reconmenu=File.openAsString(""+engine_recongui_menu_path);
     reconmenu=split(reconmenu,"\n");
-    //// n4eed too think more about how to parse this....
+    //// need too think more about how to parse this....
     // something like, while line is not a comment, 
-    // when line startw with allmenuttypes, 
+    // when line startw with allmenutypes, 
     // for each menu type....
     // build an array of strings... to split up later. 
     // complicated... 
-    
-	for(linenum=0;linenum<reconmenu.length;linenum++)
-	    {
-		line=reconmenu[linenum];
-		temp=split(line,";");
-		if (startsWith(line,"#")) { reconmenucomment=""+reconmenucomment+"\n"+line; }
-		else if (matches(line,".*TYPE.*")){ 
-		    if(startsWith(line,"ALLMENUTYPES")) { 
-			print("found all expected type line: "+line);
+    linenum=0;
+    do {
+	line=reconmenu[linenum];
+	// line should be split taking the first item as the value the second as the scanner list.
+	// menuvalue; 
+	// scannerlist; 
+	if (startsWith(line,"#")) { reconmenucomments=""+reconmenucomments+"\n"+line; if (debuglevel>=85 ) { print("commentline:"+line); } } 
+	else if (matches(line,".*TYPE.*")){ 
+	    //	    print ("typematch");
+	    if(startsWith(line,"ALLMENUTYPES")) { 
+		temparray=split(line, ";");
+		for(i=1;i<lengthOf(temparray);i++) {
+		    varlength=lengthOf(temparray[i]);
+		    if(largestvariablenamelength<varlength) { largestvariablenamelength=varlength; }
+		    menuliststring=""+menuliststring+toString(i-1)+temparray[i]+";";
+		}
+		menulistarray=split(menuliststring,";");
+		menulistelementsarray=newArray(i); //
+		menuvalarray=newArray(i);          // 
+		for(i=0;i<lengthOf(menuvalarray);i++) { menuvalarray[i]=""; }
+		print("all expected menu items: "+menuliststring);
+	    } else {
+		if (matches(line,"MENUTYPE;[a-zA-Z0-9_]*")) {
+		    menuname=substring(line,indexOf(line,";")+1);
+		    if (debuglevel >=65 ) { print("Loading recon menu txt Menu section:"+menuname); }
+		} else {
+		    exit("found *TYPE* entry but couldnt pull out menu name for linenumber:"+linenum+" in recon menu txt file "+engine_recongui_menu_path+"\n    <"+line+">");
+		}
+	    } 
+	} else {
+	    if(indexOf(line,";")>=0) {
+		menuval=substring(line,0,indexOf(line,";"));
+		scannerlist=substring(line,indexOf(line,";")+1);
+		if(matches(scannerlist,".*"+scanner+".*"))
+		    { // if our scanner is in the list of valid scanners for this option add
+			menuliststringpos=indexOf(menuliststring,menuname)-1;
+			if (menuliststringpos <= -1 ) { exit("could not find menuname: <"+menuname+"> in list of all menunames: "+menuliststring); } // check for bad menusection
+			arrayindex=substring(menuliststring,menuliststringpos,menuliststringpos+1);
+			arrayindex=parseInt(arrayindex);
+			menulistelementsarray[arrayindex]=""+menulistelementsarray[arrayindex]+";"+menuval;
 		    } else {
-		    type=temp[1];
-		    print("found type line starting section "+type); 
-		    }
+		    if ( debuglevel>=85) { print("menuvalue: "+menuval+" had no valid scanner in "+scannerlist); }
 		}
-		else if (startsWith(line,"test")) { test=temp[1]; }
-		
-		else {
-		    if ( debuglevel >= 70 ) { print(""+line); }
-		}
+	    } else {
+		exit("Bad line detected  at linenumber:"+linenum+" in recon menu txt file "+engine_recongui_menu_path+"\n    <"+line+">\nLine should contain ;, with form MENUTYPE;menuname or value;validscanner;validscanner2;validscanner3");
+		menuval="BLANK";
+		scannerlist="BLANK";
 	    }
+	}
+	linenum++;
+    } while (linenum!=reconmenu.length );
 } else {
     exit("ERROR could not find recon_menu file "+engine_recongui_menu_path);
 }
-exit();
+if (debuglevel >= 65) { Array.print(menulistelementsarray); }
 // Load Vars saved last time
+// may use date and time, keep last 10 or something.... think that is for the future
 //getDateAndTime(year, month, dayOfWeek, dayOfMonth, hour, minute, second, msec) 
-previous_param_file_name="create_gui_info_imagej_lastsettings.param"; // last settings param/headfile.
-previous_param_file=engine_recongui_paramfile_directory+"/"+previous_param_file_name;
-
+//previous_param_file_name="create_gui_info_imagej_lastsettings"+scanner+".param"; // last settings param/headfile.
+previous_param_file=engine_recongui_paramfile_directory+"/"+previous_param_file_name; // path to last settings
 if(File.exists(previous_param_file))
   {
       if ( debuglevel >=35 ){ print("Found Previous vars in file "+previous_param_file); }
       paramsettings=File.openAsString(previous_param_file);
-      paramsettings=split(previousvars,"\n");
-      ////
-      // For loop to pull variables, might be nice to do this based on a var list to make it more general
-      ////
-      for(linenum=0;linenum<paramsettings.length;linenum++) {
-	line=enginesettings[linenum];
-	temp=split(line,"=");
-	if(startsWith(line,"minrunnumber") ) { minrunnumber=temp[1]; }
-	else if (startsWith(line,"civmid") ) { civmid=temp[1]; }
-	else if (startsWith(line,"coil") ) { coil=temp[1]; }
-	else if (startsWith(line,"focus") ) { focus=temp[1]; }
-	else if (startsWith(line,"hfpmcnt") ) { hfpmcnt=temp[1]; }
-	else if (startsWith(line,"nucleus") ) { nucleus=temp[1]; }
-	else if (startsWith(line,"optional") ) { optional=temp[1]; }
-	else if (startsWith(line,"orient") ) { orient=temp[1]; }
-	else if (startsWith(line,"rplane") ) { rplane=temp[1]; }
-	else if (startsWith(line,"specid") ) { specid=temp[1]; }
-	else if (startsWith(line,"species") ) { species=temp[1]; }
-	else if (startsWith(line,"state") ) { state=temp[1]; }
-	else if (startsWith(line,"status") ) { status=temp[1]; }
-	else if (startsWith(line,"type") ) { type=temp[1]; }
-	else if (startsWith(line,"xmit") ) { xmit=temp[1]; }
-	else if (startsWith(line,"text") ) { text=temp[1]; }
-	else { }
-    }
-  }
-else {
+      paramsettings=split(paramsettings,"\n");
+//       ////
+//       // For loop to pull variables, might be nice to do this based on a var list to make it more general
+//       ////
+//       for(linenum=0;linenum<paramsettings.length;linenum++) {
+// 	line=enginesettings[linenum];
+// 	temp=split(line,"=");
+// 	if(startsWith(line,"minrunnumber") ) { minrunnumber=temp[1]; }
+// 	else if (startsWith(line,"civmid") ) { civmid=temp[1]; }
+// 	else if (startsWith(line,"coil") ) { coil=temp[1]; }
+// 	else if (startsWith(line,"focus") ) { focus=temp[1]; }
+// 	else if (startsWith(line,"hfpmcnt") ) { hfpmcnt=temp[1]; }
+// 	else if (startsWith(line,"nucleus") ) { nucleus=temp[1]; }
+// 	else if (startsWith(line,"optional") ) { optional=temp[1]; }
+// 	else if (startsWith(line,"orient") ) { orient=temp[1]; }
+// 	else if (startsWith(line,"rplane") ) { rplane=temp[1]; }
+// 	else if (startsWith(line,"specid") ) { specid=temp[1]; }
+// 	else if (startsWith(line,"species") ) { species=temp[1]; }
+// 	else if (startsWith(line,"state") ) { state=temp[1]; }
+// 	else if (startsWith(line,"status") ) { status=temp[1]; }
+// 	else if (startsWith(line,"type") ) { type=temp[1]; }
+// 	else if (startsWith(line,"xmit") ) { xmit=temp[1]; }
+// 	else if (startsWith(line,"text") ) { text=temp[1]; }
+// 	else { }
+//     }
+      linenum=0;
+      do {
+	  line=paramsettings[linenum];
+	  temp=split(line,"="); //splits each line into the menuname, value, menuname is temp[0], and value is temp[1]
+	  if(matches(menuliststring,".*"+temp[0]+".*")) // checks that this menuname is in our list of menuitms, else its ignored
+	      {
+		  menuliststringpos=indexOf(menuliststring,temp[0])-1;
+		  if (menuliststringpos <= -1) { exit("could not find menuname: <"+menuname+">"); }
+		  else { 
+		      //		      print(menuliststringpos);
+		      arrayindex=substring(menuliststring,menuliststringpos,menuliststringpos+1);
+		      arrayindex=parseInt(arrayindex);
+		      menuvalarray[arrayindex]=temp[1];
+		  }
+	      } 
+	  else if(lengthOf(temp)>1) {
+	      if (startsWith(line,"specid") ) { 
+		  if (matches(temp[1],specidpattern)) { specid=temp[1]; } // only used saved specid if its good
+	      }
+	      else if (startsWith(line,"xmit") ) { xmit=parseFloat(temp[1]); }
+	      else if (startsWith(line,"optional") ) { optional=temp[1]; }
+	      else {
+		  print("ignoring menuname:"+temp[0]+" with value:"+temp[1]+" recon menu ALLMENUTYPES line must have been updated to remove this");
+	      }
+	  }
+	  else {
+	      print("ignoring line <"+line+">");
+	  }
+	  linenum++;
+      } while(linenum<lengthOf(paramsettings));
+  } else {
     print("No previous param file found at "+previous_param_file);
 }
 
 
+////
+// set up gui for display
+////
+uselast=getBoolean("Use last saved values?");
 
-exit;
-Dialog.create("IMAGEJ: create_recon_gui");
-Dialog.addString("");
-Dialog.addString("");
-Dialog.addString("");
-Dialog.addString("");
-Dialog.addString("");
-Dialog.addString("");
-Dialog.addString("");
-Dialog.addString("");
-Dialog.addString("");
-Dialog.addString("");
-Dialog.addString("");
-Dialog.addString("");
-Dialog.show();
+// loop while our output is not good, assume good output at first, then check for bad once we read it back
+do {
+    outputgood=1;
+    Dialog.create("IMAGEJ: create_recon_gui");
+    if(uselast==0) {
+	specid="000000-1:0";
+	xmit=0;
+	optional="";		
+    }
+    Dialog.addString("specid:\t",specid,15);
+    menuitem=0;	      
+    do { 
+	menuname=substring(menulistarray[menuitem],1);
+	menuname=""+menuname+":"; // make display pretty by put colon on end of menuname before padding
+	while(lengthOf(menuname)<largestvariablenamelength){ menuname=""+menuname+" "; } // make display pretty by pading end of menuname 
+	choices=split(menulistelementsarray[menuitem],";");
+	if(uselast==0) { menudefault=""; }
+	else { menudefault=menuvalarray[menuitem]; }
+	Dialog.addChoice(""+menuname+"\t",choices,menudefault);
+	menuitem++;
+    } while (menuitem<lengthOf(menulistarray));
+    Dialog.addNumber("xmit:\t",xmit,0,4,"");
+    Dialog.addString("optional:\t",optional,80);
+    Dialog.addCheckbox("Testmode:\tTest scan WILL NOT be admitted to database.",false);
+    Dialog.show();
+    
+    ////
+    // get values from gui and check for errors, setting outputgood to 0 if bad
+    ////
+    specid=Dialog.getString();
+    menuitem=0;
+    do { 
+	arrayindex=substring(menulistarray[menuitem],0,1);
+	//    arrayindex=parseInt(arrayindex);
+	//    if (arrayindex <=0 ) { exit("possible error with index into menulistarray at menuitem["+menuitem+"]"); }
+	menuname=substring(menulistarray[menuitem],1);
+	menuvalarray[arrayindex]=Dialog.getChoice(); 
+	if(menuvalarray[arrayindex]==0) { outputgood=0; print("bad output for value"+menuname);}
+	menuitem++;
+    } while (menuitem<lengthOf(menulistarray));
+    xmit=parseFloat(Dialog.getNumber());
+    optional=Dialog.getString();
+    testmodebool=Dialog.getCheckbox();
+    if(testmodebool==true) {
+	testmodebool=getBoolean("Test scan WILL NOT be admitted to database. Is that ok?");
+    }
+    if(testmodebool==false) {
+	//sanitize specid
+	if (!matches(specid,specidpattern)) { 
+	    outputgood=getBoolean("Bad specid:<"+specid+"> did not match pattern<"+specidpattern+"> Ignore?\nNOTE:specid wont be saved in param file, you cant do this during a radish run." );
+	} else if ( specid=="000000-1:0" ){ 
+	    showMessageWithCancel("Bad Specid <"+specid+"> Please enter a valid specid");
+	    outputgood=0; 
+	}
+	if(xmit<=100.0 && xmit>=0) {//xmitgood do nothing
+	} else {//else set bad and display message
+	    showMessageWithCancel("Bad xmit:<"+xmit+"> Xmit must be a number between 0-100.0");
+	    outputgood=0;
+	}
+	if(lengthOf(optional)>240) {
+	    outputgood=0;
+	}
+    } else {
+	specid="test";
+	menuitem=0;
+	do { 
+	    arrayindex=substring(menulistarray[menuitem],0,1);
+	    //    arrayindex=parseInt(arrayindex);
+	    //    if (arrayindex <=0 ) { exit("possible error with index into menulistarray at menuitem["+menuitem+"]"); }
+	    menuname=substring(menulistarray[menuitem],1);
+	    menuvalarray[arrayindex]="test"; 
+	    menuitem++;
+	} while (menuitem<lengthOf(menulistarray));	    
+	xmit="test";
+	optional="test";
+    }
+    uselast=1;
+} while(outputgood==0);
 
 /////
 // save vars to file here.
 ////
+outtext="";
+menulistarray=split(menuliststring,";");
+Dialog.addString("specid:\t",specid,15);
+if(specid!="") { outtext=""+outtext+"specid="+specid+"\n"; }
+menuitem=0;	      
+do { 
+    menuname=substring(menulistarray[menuitem],1);
+    choices=split(menulistelementsarray[menuitem],";");
+    outtext=""+outtext+menuname+"="+menuvalarray[menuitem]+"\n";
+    menuitem++;
+} while (menuitem<lengthOf(menulistarray));
+if (optional!="") { outtext=""+outtext+"optional="+optional+"\n"; }
+outtext=""+outtext+"xmit="+xmit+"\n";
+if(testmodebool==false) {
+    print("param file save to "+previous_param_file);
+    File.saveString(outtext,previous_param_file); // saves to previous param file, each time, somewhat confusing... but suckit!
+}
+
+
+
+
+
+
+
+exit; 
+
+
+
+//// END OF REAL CODE EXAMPLE CRAP FOLLOWS
+
+
+
 filename=""+plugindir+"persistentvars/"+persistentvarfilename;
 varlist="var1 var2"; //varlist is unused as of yet
 varsave(filename, varlist);
