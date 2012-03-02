@@ -1,49 +1,128 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Create_gui_info_imagej 
-// Planed to be a feature compatabile drop in replacement for the 
+// Create_gui_info_imagej
+// Planed to be a feature compatabile drop in replacement for the
 // create_gui_info tcl  gui for radish
 // Imagej chosen for cross platform compatabiltiy, and minimal install size
-// 
-// should emulate create_gui_info as completely as possible. hopefully down to 
-// bug compatability
-//   
-// sally's recon_interface echos everything back to the console to pass its 
-// input to perl, this is how this script should operate when called the same 
-// way as hers... well shit. 
-// what i've made here is too smart, it should only take the recon_menu and 
-// the scanner_tesla, optionally it should take a paramfilename in which we will 
-// save stuff, 
 //
-// TRICKS AND LIES!, sally calls recon_interface.tcl directly from 2 places, 
+// should emulate create_gui_info as completely as possible. hopefully down to
+// bug compatability
+//
+// sally's recon_interface echos everything back to the console to pass its
+// input to perl, this is how this script should operate when called the same
+// way as hers... well shit.
+// what i've made here is too smart, it should only take the recon_menu and
+// the scanner_tesla, optionally it should take a paramfilename in which we will
+// save stuff,
+//
+// TRICKS AND LIES!, sally calls recon_interface.tcl directly from 2 places,
 // radish.perl! and create_paramfile.perl!
 ////////////////////////////////////////////////////////////////////////////////
 
-debuglevel=50;
-// expects 3 arguments in order, hostname scanner paramfile 
-arglist=getArgument();
-arglist=split(arglist," ");
-hostname=arglist[0];
-if(lengthOf(arglist)>1) {
-    scanner=arglist[1];
-    if(lengthOf(arglist)>=3) { previous_`param_file_name=arglist[2]; }
-    else { previous_param_file_name="create_gui_info_imagej_lastsettings_"+scanner+".param"; }
-    //previous_param_file_name="create_gui_info_imagej_lastsettings"+scanner+".param"; // last settings param/headfile.
-}
-if(debuglevel>=70) {
-    print("scanner:         "+scanner);
-    print("param_file_name: "+param_file_name);
-}
-////
-// radish settings to get relevant info for script.
-////
-enginesettingsfile="/recon_home/script/dir_radish/engine_"+hostname+"_radish_dependencies";
+debuglevel=0;
+//// switching to a two mode setup,
+// expects 3-4 arguments in order,
+// mode1 standalone args: engine_deps scanner paramfile, output is a filled paramfile at paramdir/paramfile
+//   mode 1 replces create_paramfile.perl from tcl_dir and/or create_gui_paramfile.perl from create_gui_paramfile
+//   ex call create_paramfile.perl $magnet_tesla $outfilename   creates the outfilename head file in the paramfiles dir.
+//
+// mode2 inline mode args: engine_deps menu_file magnet, output is echoed to console as name:::value pairs, and saved at param_dir/lastsettings_scannertesla.param
+//   mode 2 replaces recon_interface.tcl from tcldir
+//   ex call recon_interface menu_file scanner_tesla
+//   param file is saved to default location as last settings.
+//
+// engine_deps should be the full path to the engine dependency file usually in
+//   /recon_home/script/dir_radish/engine_`hostname -s`_radish_dependencies
 
 ////
 // handle multi-platform troubles
 ////
-// detect windows or mac environmet and modify settings accordingly, 
+// detect windows or mac environmet and modify settings accordingly,
 // detect if we're on zeiss or not.
 
+
+arglist=getArgument();
+arglist=split(arglist," ");
+scanner_tesla_pattern="([a-zA-Z]+[0-9]*([.][0-9]*)?t)";
+valid_scanner_pattern="([a-zA-Z]+[0-9]*([.][0-9]*)?t)|([a-zA-Z_0-9]*)";
+engine_dependency_filepath=arglist[0]; // this should be passed by clever alias when called in standalone mode.
+if(lengthOf(arglist)==3) {
+    if (matches(arglist[1],valid_scanner_pattern)) {
+	// 
+	// mode 1 standalone
+	mode="standalone";
+	scanner=arglist[1];
+	param_file_prefix=arglist[2];
+	previous_param_file_name=""+param_file_prefix+".param";
+	getDateAndTime(year, month, dayOfWeek, dayOfMonth, hour, minute, second, msec);
+	year=toString(year);
+	while(lengthOf(year)<4) {year="0"+year;}	    
+	month=toString(month+1);
+	while(lengthOf(month)<2) {month="0"+month;}
+	dayOfMonth=toString(dayOfMonth);
+	while(lengthOf(dayOfMonth)<2) {dayOfMonth="0"+dayOfMonth;}
+	hour=toString(hour);
+	while(lengthOf(hour)<2) {hour="0"+hour;}
+	minute=toString(minute);
+	while(lengthOf(minute)<2) {minute="0"+minute;}
+	second=toString(second);
+	while(lengthOf(second)<2) {second="0"+second;}
+	datetimestamp=""+year+month+dayOfMonth+hour+minute+second;
+	next_param_file_name=""+param_file_prefix+datetimestamp+".param";
+	modemessage="Function mode: "+mode+" - Standalone called via cmdprompt to prepare a param file before calling radish\n"; 
+	//Tried to load: "+previous_param_file_name;
+	useageerror=0;
+    } else if(File.exists(arglist[1])) {
+	//mode 2 inline
+	mode="inline";
+	menu_file=arglist[1];
+	scanner=arglist[2]; // exptcted as scanner name or tesla.
+	previous_param_file_name="create_gui_info_imagej_lastsettings_"+scanner+".param"; // last settings param/headfile.
+	next_param_file_name=previous_param_file_name;
+	modemessage="Function mode: "+mode+" - This is called during recon.";
+	useageerror=0;
+    } else {
+	useageerror=1;
+    }
+} else { useageerror=1; }
+if (useageerror==1) {
+    args="";
+    argcount=lengthOf(arglist)-1;
+    for(i=1;i<lengthOf(arglist);i++) { args=""+args+arglist[i]+"," ; }
+    print("Recieved args: "+args);
+    exit("Usage Error: \
+    Not enough arguments on command line; need 2 found only "+argcount+".\
+Usage: /recon_home/script/dir_radish/modules/script/ancillary/dir_create_gui_paramfile/create_gui_paramfile.perl scanner new_file_name\
+\
+    Program to make a gui parameter file which can be used by -p option of radish.\
+    Use -p in radish to stop it from asking for scan info via\
+      the GUI (graphical user interface).\
+    When -p is used radish will read settings from the gui parameter file\
+      you specify instead.\
+    2 args required:\
+\
+    scanner:        Name of magnet that will produce data, e.g.\
+                    heike, onnes, kamy, nemo, dory, 2t, 7t, 9t, b7t,\
+    new_file_name:  First part of name of the gui parameter file that\
+                    will be produced by this program.\
+\
+    Param file storage location set by recon engine parameter \"engine_recongui_paramfile_directory\"\;\
+      usually stored in /recon_home/dir_param_files\
+    ");
+}
+// if scanner is given as a name instead of a tesla value figure out the scanner dependecny file and load that to get the scanner_tesla
+if ( !matches(scanner,scanner_tesla_pattern) ) {
+    getscannertesla=1;
+    RADISH_RECON_DIR=File.getParent(engine_dependency_filepath);   // pull main recondir from the engine_dependency_filepathpath
+    scanner_dependency_filename="scanner_"+scanner+"_radish_dependencies";
+    scanner_dependency_filepath=""+RADISH_RECON_DIR+"/"+scanner_dependency_filename;
+} else {
+    getscannertesla=0;
+}
+
+////
+// radish settings to get relevant info for script.
+////
+//engine_dependency_filepath="/recon_home/script/dir_radish/engine_"+hostname+"_radish_dependencies";
 
 ////
 // option vars
@@ -54,51 +133,56 @@ enginesettingsfile="/recon_home/script/dir_radish/engine_"+hostname+"_radish_dep
 ////
 
 ////
-// runnumber var's init
-////
-minrunnumber=740;
-maxrunnumber=760;
-runnumdigits=minrunnumber;
-runnumberpattern="Z00000";// should get this from a setting file so its relatively easy to expand. 
-runnumchars=lengthOf(runnumberpattern);
-modality=substring(runnumberpattern,0,1);
-modality=toUpperCase(modality);
-
-numzeroes=lengthOf(runnumberpattern)-lengthOf(toString(minrunnumber));
-
-study="James Cook/";
-studypath="/mnt/shares/petspace/";
-
-
-////
 // Load files
 ////
-//radish settings
-if(File.exists(""+enginesettingsfile))
-    {
-	enginesettings=File.openAsString(""+enginesettingsfile);	
-	enginesettings=split(enginesettings,"\n");
-	for(linenum=0;linenum<enginesettings.length;linenum++)
-	    {
-		line=enginesettings[linenum];
-		temp=split(line,"=");
-		//engine_work_directory;
-		if(startsWith(line,"engine_work_directory")) { engine_work_directory=temp[1]; }
-		//engine_recongui_paramfile_directory;
-		else if (startsWith(line,"engine_recongui_paramfile_directory")) { engine_recongui_paramfile_directory=temp[1]; } 
-		//engine_recongui_menu_path;
-		else if (startsWith(line,"engine_recongui_menu_path")) { engine_recongui_menu_path=temp[1]; }
-		//engine_archive_tag_directory;
-		else if (startsWith(line,"engine_archive_tag_directory")) { engine_archive_tag_directory=temp[1]; }
-		else { 
-		    if ( debuglevel >= 70 ) { print(""+line); }
-		}
-	    }	
+//scanner settings , only need one value, shame to do it this way, but this will cover all bases
+if(getscannertesla==1) {
+    if(debuglevel>=50) { print("Getting Scanner Tesla"); }
+    if(File.exists(""+scanner_dependency_filepath)) {
+	scannersettings=File.openAsString(""+scanner_dependency_filepath);
+	scannersettings=split(scannersettings,"\n");
+	for(linenum=0;linenum<scannersettings.length;linenum++) {
+	    temp=split(scannersettings[linenum],"=");
+	    if(matches(temp[0],"scanner_tesla")) {
+		scanner=temp[1];
+	    }
+	}
     } else {
-	exit("ERROR could not find enginesetting file "+enginesettingsfile);
+	exit("ERROR could not get scanner tesla. Did not find scanner_dependency_file at path:"+scanner_dependency_filepath+" for scanner "+scanner);
+	//, something is wrong If error perists notify james.
     }
-print ("");
+    if(!matches(scanner,scanner_tesla_pattern)) {
+	exit("ERROR could not get scanner tesla. Did not find scanner_dependency_file at path:"+scanner_dependency_filepath+" for scanner "+scanner);
+    }
+}
+if(debuglevel>=50) {
+    print("scanner:                  "+scanner);
+    print("previous_param_file_name: "+previous_param_file_name);
+}
+//radish settings
+if(File.exists(""+engine_dependency_filepath)) {
+    enginesettings=File.openAsString(""+engine_dependency_filepath);
+    enginesettings=split(enginesettings,"\n");
+    for(linenum=0;linenum<enginesettings.length;linenum++) {
+	line=enginesettings[linenum];
+	temp=split(line,"=");
+	//engine_work_directory;
+	if(startsWith(line,"engine_work_directory")) { engine_work_directory=temp[1]; }
+	//engine_recongui_paramfile_directory;
+	else if (startsWith(line,"engine_recongui_paramfile_directory")) { engine_recongui_paramfile_directory=temp[1]; }
+	//engine_recongui_menu_path;
+	else if (startsWith(line,"engine_recongui_menu_path")) { engine_recongui_menu_path=temp[1]; }
+	//engine_archive_tag_directory;
+	else if (startsWith(line,"engine_archive_tag_directory")) { engine_archive_tag_directory=temp[1]; }
+	else {
+	    if ( debuglevel >= 70 ) { print(""+line); }
+	}
+    }
+} else {
+    exit("ERROR could not find enginesetting file "+engine_dependency_filepath);
+}
 if ( debuglevel >= 45 ) {
+    print("engine_dependency_filepath:          "+engine_dependency_filepath);
     print("engine_recongui_paramfile_directory: "+engine_recongui_paramfile_directory);
     print("engine_recongui_menu_path:           "+engine_recongui_menu_path);
     print("engine_work_directory:               "+engine_work_directory);
@@ -107,9 +191,10 @@ if ( debuglevel >= 45 ) {
 //recon_menu.txt
 reconmenucomments="";
 menuliststring="";        // semi-colon seperated string for each menuname type.
-// these arrays cant be set until we know how many menunames we have, we find that out once we read ALLMENUTYPES
+// the size of these arrays cant be set until we know how many menunames we have, we find that out once we read ALLMENUTYPES
 menulistelementsarray=""; // array of semi-colon seperated strings, one array element per menuname item
 menuvalarray="";          // array of strings, the previous and curretn selected values for each menutname item
+//default settings
 specidpattern="[0-9]{6}-[0-9]*:[0-9]*";
 specid="000000-1:0";
 xmit=0;
@@ -118,22 +203,16 @@ largestvariablenamelength=0;//setting to be used latter to make display pretty
 if(File.exists(""+engine_recongui_menu_path)) {
     reconmenu=File.openAsString(""+engine_recongui_menu_path);
     reconmenu=split(reconmenu,"\n");
-    //// need too think more about how to parse this....
-    // something like, while line is not a comment, 
-    // when line startw with allmenutypes, 
-    // for each menu type....
-    // build an array of strings... to split up later. 
-    // complicated... 
     linenum=0;
     do {
 	line=reconmenu[linenum];
 	// line should be split taking the first item as the value the second as the scanner list.
-	// menuvalue; 
-	// scannerlist; 
-	if (startsWith(line,"#")) { reconmenucomments=""+reconmenucomments+"\n"+line; if (debuglevel>=85 ) { print("commentline:"+line); } } 
-	else if (matches(line,".*TYPE.*")){ 
+	// menuvalue;
+	// scannerlist;
+	if (startsWith(line,"#")) { reconmenucomments=""+reconmenucomments+"\n"+line; if (debuglevel>=85 ) { print("commentline:"+line); } }
+	else if (matches(line,".*TYPE.*")){
 	    //	    print ("typematch");
-	    if(startsWith(line,"ALLMENUTYPES")) { 
+	    if(startsWith(line,"ALLMENUTYPES")) {
 		temparray=split(line, ";");
 		for(i=1;i<lengthOf(temparray);i++) {
 		    varlength=lengthOf(temparray[i]);
@@ -142,9 +221,9 @@ if(File.exists(""+engine_recongui_menu_path)) {
 		}
 		menulistarray=split(menuliststring,";");
 		menulistelementsarray=newArray(i); //
-		menuvalarray=newArray(i);          // 
+		menuvalarray=newArray(i);          //
 		for(i=0;i<lengthOf(menuvalarray);i++) { menuvalarray[i]=""; }
-		print("all expected menu items: "+menuliststring);
+		if (debuglevel>=35) { print("all expected menu items: "+menuliststring); }
 	    } else {
 		if (matches(line,"MENUTYPE;[a-zA-Z0-9_]*")) {
 		    menuname=substring(line,indexOf(line,";")+1);
@@ -152,7 +231,7 @@ if(File.exists(""+engine_recongui_menu_path)) {
 		} else {
 		    exit("found *TYPE* entry but couldnt pull out menu name for linenumber:"+linenum+" in recon menu txt file "+engine_recongui_menu_path+"\n    <"+line+">");
 		}
-	    } 
+	    }
 	} else {
 	    if(indexOf(line,";")>=0) {
 		menuval=substring(line,0,indexOf(line,";"));
@@ -179,40 +258,17 @@ if(File.exists(""+engine_recongui_menu_path)) {
     exit("ERROR could not find recon_menu file "+engine_recongui_menu_path);
 }
 if (debuglevel >= 65) { Array.print(menulistelementsarray); }
+dialogerrordisplaystring="";
 // Load Vars saved last time
 // may use date and time, keep last 10 or something.... think that is for the future
-//getDateAndTime(year, month, dayOfWeek, dayOfMonth, hour, minute, second, msec) 
 //previous_param_file_name="create_gui_info_imagej_lastsettings"+scanner+".param"; // last settings param/headfile.
 previous_param_file=engine_recongui_paramfile_directory+"/"+previous_param_file_name; // path to last settings
+next_param_file=engine_recongui_paramfile_directory+"/"+next_param_file_name; // path to next settings
 if(File.exists(previous_param_file))
   {
       if ( debuglevel >=35 ){ print("Found Previous vars in file "+previous_param_file); }
       paramsettings=File.openAsString(previous_param_file);
       paramsettings=split(paramsettings,"\n");
-//       ////
-//       // For loop to pull variables, might be nice to do this based on a var list to make it more general
-//       ////
-//       for(linenum=0;linenum<paramsettings.length;linenum++) {
-// 	line=enginesettings[linenum];
-// 	temp=split(line,"=");
-// 	if(startsWith(line,"minrunnumber") ) { minrunnumber=temp[1]; }
-// 	else if (startsWith(line,"civmid") ) { civmid=temp[1]; }
-// 	else if (startsWith(line,"coil") ) { coil=temp[1]; }
-// 	else if (startsWith(line,"focus") ) { focus=temp[1]; }
-// 	else if (startsWith(line,"hfpmcnt") ) { hfpmcnt=temp[1]; }
-// 	else if (startsWith(line,"nucleus") ) { nucleus=temp[1]; }
-// 	else if (startsWith(line,"optional") ) { optional=temp[1]; }
-// 	else if (startsWith(line,"orient") ) { orient=temp[1]; }
-// 	else if (startsWith(line,"rplane") ) { rplane=temp[1]; }
-// 	else if (startsWith(line,"specid") ) { specid=temp[1]; }
-// 	else if (startsWith(line,"species") ) { species=temp[1]; }
-// 	else if (startsWith(line,"state") ) { state=temp[1]; }
-// 	else if (startsWith(line,"status") ) { status=temp[1]; }
-// 	else if (startsWith(line,"type") ) { type=temp[1]; }
-// 	else if (startsWith(line,"xmit") ) { xmit=temp[1]; }
-// 	else if (startsWith(line,"text") ) { text=temp[1]; }
-// 	else { }
-//     }
       linenum=0;
       do {
 	  line=paramsettings[linenum];
@@ -220,56 +276,76 @@ if(File.exists(previous_param_file))
 	  if(matches(menuliststring,".*"+temp[0]+".*")) // checks that this menuname is in our list of menuitms, else its ignored
 	      {
 		  menuliststringpos=indexOf(menuliststring,temp[0])-1;
-		  if (menuliststringpos <= -1) { exit("could not find menuname: <"+menuname+">"); }
-		  else { 
-		      //		      print(menuliststringpos);
+		  if (menuliststringpos <= -1) { exit("could not find menuname: <"+temp[0]+">"); }
+		  else {
 		      arrayindex=substring(menuliststring,menuliststringpos,menuliststringpos+1);
 		      arrayindex=parseInt(arrayindex);
-		      menuvalarray[arrayindex]=temp[1];
+		      if(matches(menulistelementsarray[arrayindex],".*"+temp[1]+".*")) {
+			  menuvalarray[arrayindex]=temp[1];
+		      } else { 
+			  dialogerrordisplaystring=""+dialogerrordisplaystring+"invalid value for item: "+temp[0]+" with value: "+temp[1]+"\n";
+			  menuvalarray[arrayindex]=0;
+		      }
 		  }
-	      } 
-	  else if(lengthOf(temp)>1) {
-	      if (startsWith(line,"specid") ) { 
-		  if (matches(temp[1],specidpattern)) { specid=temp[1]; } // only used saved specid if its good
 	      }
-	      else if (startsWith(line,"xmit") ) { xmit=parseFloat(temp[1]); }
-	      else if (startsWith(line,"optional") ) { optional=temp[1]; }
-	      else {
-		  print("ignoring menuname:"+temp[0]+" with value:"+temp[1]+" recon menu ALLMENUTYPES line must have been updated to remove this");
+	  else if(lengthOf(temp)>1) {
+	      if (startsWith(line,"specid") ) {
+		  if (matches(temp[1],specidpattern)) { 
+		      specid=temp[1]; 
+		  } else { 
+		      dialogerrordisplaystring=""+dialogerrordisplaystring+"invalid value for item: "+temp[0]+" with value: "+specid+" does not match pattern:"+specidpattern+"\n";
+		  }
+	      } else if (startsWith(line,"xmit") ) { xmit=parseFloat(temp[1]); 
+	      } else if (startsWith(line,"optional") ) { optional=temp[1]; 
+	      } else if (matches(line, ".*(recongui_date|version_pm_Headfile|status|hfpmcnt).*")) {
+	      } else {
+		  dialogerrordisplaystring=""+dialogerrordisplaystring+"invalid name  for item: "+temp[0]+" with value:"+temp[1]+" name not in ALLMENUTYPES list, Do you have the right scanner?\n ";//recon menu ALLMENUTYPES line must have been updated to remove this\n";
 	      }
 	  }
 	  else {
-	      print("ignoring line <"+line+">");
+	      dialogerrordisplaystring=""+dialogerrordisplaystring+"BAD LINE AT LINENUM:"+linenum+"<"+line+">\n";
+	      if (debuglevel>=35) { print("ignoring line <"+line+">"); }
 	  }
 	  linenum++;
       } while(linenum<lengthOf(paramsettings));
+      uselastsettings_boolean=getBoolean("Use last saved values?");
   } else {
-    print("No previous param file found at "+previous_param_file);
+    if (debuglevel>=35 ){ print("No previous param file found at "+previous_param_file+". Or No param file specified."); }
+    uselastsettings_boolean=0;
 }
-
-
+if(uselastsettings_boolean==1) {
+    loadmessage="Loaded file:    "+previous_param_file_name; 
+} else {
+    loadmessage="Did not try to load a file.";
+    dialogerrordisplaystring="";
+}
+if(dialogerrordisplaystring=="") {
+    dialogerrordisplaystring="<NONE>";
+}
+savemessage=  "Saving file to: "+next_param_file_name;
 ////
 // set up gui for display
 ////
-uselast=getBoolean("Use last saved values?");
 
 // loop while our output is not good, assume good output at first, then check for bad once we read it back
 do {
     outputgood=1;
     Dialog.create("IMAGEJ: create_recon_gui");
-    if(uselast==0) {
+    Dialog.addMessage(""+modemessage+"\n"+loadmessage+"\n"+savemessage);
+    Dialog.addMessage("Load Warnings:\n"+dialogerrordisplaystring);
+    if(uselastsettings_boolean==0) {
 	specid="000000-1:0";
 	xmit=0;
-	optional="";		
+	optional="";
     }
     Dialog.addString("specid:\t",specid,15);
-    menuitem=0;	      
-    do { 
+    menuitem=0;
+    do {
 	menuname=substring(menulistarray[menuitem],1);
 	menuname=""+menuname+":"; // make display pretty by put colon on end of menuname before padding
-	while(lengthOf(menuname)<largestvariablenamelength){ menuname=""+menuname+" "; } // make display pretty by pading end of menuname 
+	while(lengthOf(menuname)<largestvariablenamelength){ menuname=""+menuname+" "; } // make display pretty by pading end of menuname
 	choices=split(menulistelementsarray[menuitem],";");
-	if(uselast==0) { menudefault=""; }
+	if(uselastsettings_boolean==0) { menudefault=""; }
 	else { menudefault=menuvalarray[menuitem]; }
 	Dialog.addChoice(""+menuname+"\t",choices,menudefault);
 	menuitem++;
@@ -278,19 +354,19 @@ do {
     Dialog.addString("optional:\t",optional,80);
     Dialog.addCheckbox("Testmode:\tTest scan WILL NOT be admitted to database.",false);
     Dialog.show();
-    
+
     ////
     // get values from gui and check for errors, setting outputgood to 0 if bad
     ////
     specid=Dialog.getString();
     menuitem=0;
-    do { 
+    do {
 	arrayindex=substring(menulistarray[menuitem],0,1);
 	//    arrayindex=parseInt(arrayindex);
 	//    if (arrayindex <=0 ) { exit("possible error with index into menulistarray at menuitem["+menuitem+"]"); }
 	menuname=substring(menulistarray[menuitem],1);
-	menuvalarray[arrayindex]=Dialog.getChoice(); 
-	if(menuvalarray[arrayindex]==0) { outputgood=0; print("bad output for value"+menuname);}
+	menuvalarray[arrayindex]=Dialog.getChoice();
+	if(menuvalarray[arrayindex]==0) { outputgood=0; print("bad output for item:"+menuname);}
 	menuitem++;
     } while (menuitem<lengthOf(menulistarray));
     xmit=parseFloat(Dialog.getNumber());
@@ -301,11 +377,11 @@ do {
     }
     if(testmodebool==false) {
 	//sanitize specid
-	if (!matches(specid,specidpattern)) { 
+	if (!matches(specid,specidpattern)) {
 	    outputgood=getBoolean("Bad specid:<"+specid+"> did not match pattern<"+specidpattern+"> Ignore?\nNOTE:specid wont be saved in param file, you cant do this during a radish run." );
-	} else if ( specid=="000000-1:0" ){ 
+	} else if ( specid=="000000-1:0" ){
 	    showMessageWithCancel("Bad Specid <"+specid+"> Please enter a valid specid");
-	    outputgood=0; 
+	    outputgood=0;
 	}
 	if(xmit<=100.0 && xmit>=0) {//xmitgood do nothing
 	} else {//else set bad and display message
@@ -318,48 +394,69 @@ do {
     } else {
 	specid="test";
 	menuitem=0;
-	do { 
+	do {
 	    arrayindex=substring(menulistarray[menuitem],0,1);
 	    //    arrayindex=parseInt(arrayindex);
 	    //    if (arrayindex <=0 ) { exit("possible error with index into menulistarray at menuitem["+menuitem+"]"); }
 	    menuname=substring(menulistarray[menuitem],1);
-	    menuvalarray[arrayindex]="test"; 
+	    menuvalarray[arrayindex]="test";
 	    menuitem++;
-	} while (menuitem<lengthOf(menulistarray));	    
+	} while (menuitem<lengthOf(menulistarray));
 	xmit="test";
 	optional="test";
     }
-    uselast=1;
+    uselastsettings_boolean=1;
 } while(outputgood==0);
 
 /////
 // save vars to file here.
 ////
-outtext="";
+namevalseparators=newArray(":::","=");
+// if(mode=="inline") {
+//     namevalseparator=":::";
+// } else if (mode=="standalone") {
+//     namevalseparator="=";
+// } else {
+//     exit("BAD MODE: MAJOR ERROR");
+// }
+paramtexts=newArray("","");
+//outtext="";
+
+
 menulistarray=split(menuliststring,";");
-Dialog.addString("specid:\t",specid,15);
-if(specid!="") { outtext=""+outtext+"specid="+specid+"\n"; }
-menuitem=0;	      
-do { 
-    menuname=substring(menulistarray[menuitem],1);
-    choices=split(menulistelementsarray[menuitem],";");
-    outtext=""+outtext+menuname+"="+menuvalarray[menuitem]+"\n";
-    menuitem++;
-} while (menuitem<lengthOf(menulistarray));
-if (optional!="") { outtext=""+outtext+"optional="+optional+"\n"; }
-outtext=""+outtext+"xmit="+xmit+"\n";
+for(modenum=0;modenum<2;modenum++ ) {
+    if(specid!="") { 
+	paramtexts[modenum]=""+paramtexts[modenum]+"specid"+namevalseparators[modenum]+specid+"\n"; 
+    }
+    menuitem=0;
+    do {
+	menuname=substring(menulistarray[menuitem],1);
+	choices=split(menulistelementsarray[menuitem],";");
+	paramtexts[modenum]=""+paramtexts[modenum]+menuname+namevalseparators[modenum]+menuvalarray[menuitem]+"\n";
+	menuitem++;
+    } while (menuitem<lengthOf(menulistarray));
+    if (optional!="") { 
+	paramtexts[modenum]=""+paramtexts[modenum]+"optional"+namevalseparators[modenum]+optional+"\n"; 
+    }
+    paramtexts[modenum]=""+paramtexts[modenum]+"xmit"+namevalseparators[modenum]+xmit;
+}
 if(testmodebool==false) {
-    print("param file save to "+previous_param_file);
-    File.saveString(outtext,previous_param_file); // saves to previous param file, each time, somewhat confusing... but suckit!
+    //print("param file save to "+next_param_file);
+    File.saveString(paramtexts[1],next_param_file); // saves to previous param file, each time, somewhat confusing... but suckit!
+}
+if(mode=="inline") {
+    print(paramtexts[0]); 
 }
 
+    
 
 
 
 
 
 
-exit; 
+
+exit;
 
 
 
@@ -989,7 +1086,7 @@ for(go=0; go<4;go++)
 
 		    //run("Raw...", "open=/Volumes/atlas1/09.novartis.03/research/"+runnumber+"/"+specidbase+"_"+specid+"_"+specidpiece+"_"+runnumber+"_v1.img image=[32-bit Signed] width=128 height=128 offset=0 number=63 gap=0 little-endian");
 		  }
-		else 
+		else
 		  {
 		    if(go==0)
 		      print(" File not found");
@@ -1045,7 +1142,7 @@ function varsave(filenamepath,mylist)
 
   print(studypath);
   print(varpersistencefile, "studypath: "+studypath);
-  
+
   File.close(varpersistencefile);
   return 1;
 
