@@ -18,6 +18,9 @@
 // radish.perl! and create_paramfile.perl!
 ////////////////////////////////////////////////////////////////////////////////
 
+
+//getVersion()
+requires(1.45);
 debuglevel=0;
 //// switching to a two mode setup,
 // expects 3-4 arguments in order,
@@ -29,6 +32,8 @@ debuglevel=0;
 //   mode 2 replaces recon_interface.tcl from tcldir
 //   ex call recon_interface menu_file scanner_tesla
 //   param file is saved to default location as last settings.
+//
+// mode3 process allmenuitems list args: engine_deps menu_file
 //
 // engine_deps should be the full path to the engine dependency file usually in
 //   /recon_home/script/dir_radish/engine_`hostname -s`_radish_dependencies
@@ -43,43 +48,60 @@ debuglevel=0;
 arglist=getArgument();
 arglist=split(arglist," ");
 scanner_tesla_pattern="([a-zA-Z]+[0-9]*([.][0-9]*)?t)";
-valid_scanner_pattern="([a-zA-Z]+[0-9]*([.][0-9]*)?t)|([a-zA-Z_0-9]*)";
+scanner_tesla_pattern="[A-z]?[0-9]+([.][0-9]+)?t";
+valid_scanner_pattern="([a-zA-Z]+[0-9]*([.][0-9]*)?t)|([a-zA-Z._0-9]*)";
 engine_dependency_filepath=arglist[0]; // this should be passed by clever alias when called in standalone mode.
-if(lengthOf(arglist)==3) {
+dialogerrordisplaystring="";
+
+getDateAndTime(year, month, dayOfWeek, dayOfMonth, hour, minute, second, msec);
+year=toString(year);
+while(lengthOf(year)<4) {year="0"+year;}	    
+month=toString(month+1);
+while(lengthOf(month)<2) {month="0"+month;}
+dayOfMonth=toString(dayOfMonth);
+while(lengthOf(dayOfMonth)<2) {dayOfMonth="0"+dayOfMonth;}
+hour=toString(hour);
+while(lengthOf(hour)<2) {hour="0"+hour;}
+minute=toString(minute);
+while(lengthOf(minute)<2) {minute="0"+minute;}
+second=toString(second);
+while(lengthOf(second)<2) {second="0"+second;}
+datetimestamp=""+year+month+dayOfMonth+hour+minute+second;
+radishdate=""+dayOfMonth+"/"+month+"/"+substring(year,2);
+if(lengthOf(arglist)>=2) {
     if (matches(arglist[1],valid_scanner_pattern)) {
 	// 
 	// mode 1 standalone
 	mode="standalone";
+	debuglevel=49;
 	scanner=arglist[1];
 	param_file_prefix=arglist[2];
 	previous_param_file_name=""+param_file_prefix+".param";
-	getDateAndTime(year, month, dayOfWeek, dayOfMonth, hour, minute, second, msec);
-	year=toString(year);
-	while(lengthOf(year)<4) {year="0"+year;}	    
-	month=toString(month+1);
-	while(lengthOf(month)<2) {month="0"+month;}
-	dayOfMonth=toString(dayOfMonth);
-	while(lengthOf(dayOfMonth)<2) {dayOfMonth="0"+dayOfMonth;}
-	hour=toString(hour);
-	while(lengthOf(hour)<2) {hour="0"+hour;}
-	minute=toString(minute);
-	while(lengthOf(minute)<2) {minute="0"+minute;}
-	second=toString(second);
-	while(lengthOf(second)<2) {second="0"+second;}
-	datetimestamp=""+year+month+dayOfMonth+hour+minute+second;
 	next_param_file_name=""+param_file_prefix+datetimestamp+".param";
 	modemessage="Function mode: "+mode+" - Standalone called via cmdprompt to prepare a param file before calling radish\n"; 
 	//Tried to load: "+previous_param_file_name;
 	useageerror=0;
     } else if(File.exists(arglist[1])) {
+	if(lengthOf(arglist)==3) {
 	//mode 2 inline
-	mode="inline";
-	menu_file=arglist[1];
-	scanner=arglist[2]; // exptcted as scanner name or tesla.
-	previous_param_file_name="create_gui_info_imagej_lastsettings_"+scanner+".param"; // last settings param/headfile.
-	next_param_file_name=previous_param_file_name;
-	modemessage="Function mode: "+mode+" - This is called during recon.";
-	useageerror=0;
+	    mode="inline";
+	    menu_file=arglist[1];
+	    scanner=arglist[2]; // exptcted as scanner name or tesla.
+	    previous_param_file_name="create_gui_info_imagej_lastsettings_"+scanner+".param"; // last settings param/headfile.
+	    next_param_file_name=previous_param_file_name;
+	    modemessage="Function mode: "+mode+" - This is called during recon.";
+	    debuglevel=0;
+	    useageerror=0;
+	} else {
+	    mode="getvalidargs";
+	    menu_file=arglist[1];
+	    scanner="";
+	    previous_param_file_name="";
+	    next_param_file_name=previous_param_file_name;
+	    modemessage="Function mode: "+mode+" - This is called during recon, when only the recon menu text is used";
+	    //	    debuglevel=100;
+	    useageerror=0;	    
+	}
     } else {
 	useageerror=1;
     }
@@ -88,9 +110,8 @@ if (useageerror==1) {
     args="";
     argcount=lengthOf(arglist)-1;
     for(i=1;i<lengthOf(arglist);i++) { args=""+args+arglist[i]+"," ; }
-    print("Recieved args: "+args);
     exit("Usage Error: \
-    Not enough arguments on command line; need 2 found only "+argcount+".\
+    Bad arguments on command line; need 2 found "+argcount+".  Recieved args: "+args+"\
 Usage: /recon_home/script/dir_radish/modules/script/ancillary/dir_create_gui_paramfile/create_gui_paramfile.perl scanner new_file_name\
 \
     Program to make a gui parameter file which can be used by -p option of radish.\
@@ -110,12 +131,14 @@ Usage: /recon_home/script/dir_radish/modules/script/ancillary/dir_create_gui_par
     ");
 }
 // if scanner is given as a name instead of a tesla value figure out the scanner dependecny file and load that to get the scanner_tesla
-if ( !matches(scanner,scanner_tesla_pattern) ) {
+if ( !matches(scanner,scanner_tesla_pattern) && mode !="getvalidargs" ) {
     getscannertesla=1;
     RADISH_RECON_DIR=File.getParent(engine_dependency_filepath);   // pull main recondir from the engine_dependency_filepathpath
     scanner_dependency_filename="scanner_"+scanner+"_radish_dependencies";
     scanner_dependency_filepath=""+RADISH_RECON_DIR+"/"+scanner_dependency_filename;
 } else {
+    // need somehow to say if we've got a bogus scanner tesla value, not sure where to do that. 
+    dialogerrordisplaystring="Scanner Tesla Specified directly, Empty Drop down menus indicates bad scanner tesla. Try using a name.\n";
     getscannertesla=0;
 }
 
@@ -181,6 +204,9 @@ if(File.exists(""+engine_dependency_filepath)) {
 } else {
     exit("ERROR could not find enginesetting file "+engine_dependency_filepath);
 }
+if(mode!="standalone") {
+    engine_recongui_menu_path=menu_file;
+}
 if ( debuglevel >= 45 ) {
     print("engine_dependency_filepath:          "+engine_dependency_filepath);
     print("engine_recongui_paramfile_directory: "+engine_recongui_paramfile_directory);
@@ -190,10 +216,12 @@ if ( debuglevel >= 45 ) {
     }
 //recon_menu.txt
 reconmenucomments="";
-menuliststring="";        // semi-colon seperated string for each menuname type.
+menuliststring="";        // semi-colon seperated string for each menuname type. with index prepended to name
+allmenus="";              // mode3 variable to hold all the menus in a space separated list
 // the size of these arrays cant be set until we know how many menunames we have, we find that out once we read ALLMENUTYPES
 menulistelementsarray=""; // array of semi-colon seperated strings, one array element per menuname item
 menuvalarray="";          // array of strings, the previous and curretn selected values for each menutname item
+
 //default settings
 specidpattern="[0-9]{6}-[0-9]*:[0-9]*";
 specid="000000-1:0";
@@ -215,15 +243,20 @@ if(File.exists(""+engine_recongui_menu_path)) {
 	    if(startsWith(line,"ALLMENUTYPES")) {
 		temparray=split(line, ";");
 		for(i=1;i<lengthOf(temparray);i++) {
+		    allmenus=""+allmenus+temparray[i]+" ";
+		    if (debuglevel>=90) { print(temparray[i]); }
 		    varlength=lengthOf(temparray[i]);
 		    if(largestvariablenamelength<varlength) { largestvariablenamelength=varlength; }
 		    menuliststring=""+menuliststring+toString(i-1)+temparray[i]+";";
+		}
+		if (mode=="getvalidargs") {
+		    exit(""+allmenus+"specid xmit optional status");
 		}
 		menulistarray=split(menuliststring,";");
 		menulistelementsarray=newArray(i); //
 		menuvalarray=newArray(i);          //
 		for(i=0;i<lengthOf(menuvalarray);i++) { menuvalarray[i]=""; }
-		if (debuglevel>=35) { print("all expected menu items: "+menuliststring); }
+		if (debuglevel>=55) { print("all expected menu items: "+menuliststring); }
 	    } else {
 		if (matches(line,"MENUTYPE;[a-zA-Z0-9_]*")) {
 		    menuname=substring(line,indexOf(line,";")+1);
@@ -258,7 +291,7 @@ if(File.exists(""+engine_recongui_menu_path)) {
     exit("ERROR could not find recon_menu file "+engine_recongui_menu_path);
 }
 if (debuglevel >= 65) { Array.print(menulistelementsarray); }
-dialogerrordisplaystring="";
+uselastsettings_boolean=0;
 // Load Vars saved last time
 // may use date and time, keep last 10 or something.... think that is for the future
 //previous_param_file_name="create_gui_info_imagej_lastsettings"+scanner+".param"; // last settings param/headfile.
@@ -276,7 +309,7 @@ if(File.exists(previous_param_file))
 	  if(matches(menuliststring,".*"+temp[0]+".*")) // checks that this menuname is in our list of menuitms, else its ignored
 	      {
 		  menuliststringpos=indexOf(menuliststring,temp[0])-1;
-		  if (menuliststringpos <= -1) { exit("could not find menuname: <"+temp[0]+">"); }
+		  if (menuliststringpos <= -1) { exit("ERROR: could not find menuname: <"+temp[0]+"> in menulist <"+allmenus+">"); }
 		  else {
 		      arrayindex=substring(menuliststring,menuliststringpos,menuliststringpos+1);
 		      arrayindex=parseInt(arrayindex);
@@ -303,7 +336,8 @@ if(File.exists(previous_param_file))
 	      }
 	  }
 	  else {
-	      dialogerrordisplaystring=""+dialogerrordisplaystring+"BAD LINE AT LINENUM:"+linenum+"<"+line+">\n";
+	      if(!startsWith(line,"optional=")) {
+		      dialogerrordisplaystring=""+dialogerrordisplaystring+"BAD LINE AT LINENUM:"+linenum+"<"+line+">\n"; }
 	      if (debuglevel>=35) { print("ignoring line <"+line+">"); }
 	  }
 	  linenum++;
@@ -326,13 +360,14 @@ savemessage=  "Saving file to: "+next_param_file_name;
 ////
 // set up gui for display
 ////
-
+if(debuglevel>=50) { print("Starting dialog setup"); }
 // loop while our output is not good, assume good output at first, then check for bad once we read it back
 do {
     outputgood=1;
     Dialog.create("IMAGEJ: create_recon_gui");
     Dialog.addMessage(""+modemessage+"\n"+loadmessage+"\n"+savemessage);
     Dialog.addMessage("Load Warnings:\n"+dialogerrordisplaystring);
+    dialogerrordisplaystring="";
     if(uselastsettings_boolean==0) {
 	specid="000000-1:0";
 	xmit=0;
@@ -366,7 +401,7 @@ do {
 	//    if (arrayindex <=0 ) { exit("possible error with index into menulistarray at menuitem["+menuitem+"]"); }
 	menuname=substring(menulistarray[menuitem],1);
 	menuvalarray[arrayindex]=Dialog.getChoice();
-	if(menuvalarray[arrayindex]==0) { outputgood=0; print("bad output for item:"+menuname);}
+	if(menuvalarray[arrayindex]==0) { outputgood=0; dialogerrordisplaystring=""+dialogerrordisplaystring+"bad output for item:"+menuname; }
 	menuitem++;
     } while (menuitem<lengthOf(menulistarray));
     xmit=parseFloat(Dialog.getNumber());
@@ -380,15 +415,18 @@ do {
 	if (!matches(specid,specidpattern)) {
 	    outputgood=getBoolean("Bad specid:<"+specid+"> did not match pattern<"+specidpattern+"> Ignore?\nNOTE:specid wont be saved in param file, you cant do this during a radish run." );
 	} else if ( specid=="000000-1:0" ){
-	    showMessageWithCancel("Bad Specid <"+specid+"> Please enter a valid specid");
+	    //	    showMessageWithCancel("Bad Specid <"+specid+"> Please enter a valid specid");
+	    dialogerrordisplaystring=""+dialogerrordisplaystring+"Bad Specid <"+specid+"> Please enter a valid specid";
 	    outputgood=0;
 	}
 	if(xmit<=100.0 && xmit>=0) {//xmitgood do nothing
 	} else {//else set bad and display message
-	    showMessageWithCancel("Bad xmit:<"+xmit+"> Xmit must be a number between 0-100.0");
+	    //	    showMessageWithCancel("Bad xmit:<"+xmit+"> Xmit must be a number between 0-100.0");
+	    dialogerrordisplaystring=""+dialogerrordisplaystring+"Bad xmit:<"+xmit+"> Xmit must be a number between 0-100.0";
 	    outputgood=0;
 	}
 	if(lengthOf(optional)>240) {
+	    dialogerrordisplaystring=""+dialogerrordisplaystring+"Bad Optional: <"+optional+"> more than 240 characters entered";
 	    outputgood=0;
 	}
     } else {
@@ -419,15 +457,17 @@ namevalseparators=newArray(":::","=");
 // } else {
 //     exit("BAD MODE: MAJOR ERROR");
 // }
-paramtexts=newArray("","");
-//outtext="";
 
+
+//paramtexts=newArray("","");
+if(specid!="") { 
+    paramtexts=newArray("specid"+namevalseparators[0]+specid+"\n","specid"+namevalseparators[1]+specid+"\n");
+    //    paramtexts[modenum]=""+paramtexts[modenum]+"specid"+namevalseparators[modenum]+specid+"\n"; 
+}
+//outtext="";
 
 menulistarray=split(menuliststring,";");
 for(modenum=0;modenum<2;modenum++ ) {
-    if(specid!="") { 
-	paramtexts[modenum]=""+paramtexts[modenum]+"specid"+namevalseparators[modenum]+specid+"\n"; 
-    }
     menuitem=0;
     do {
 	menuname=substring(menulistarray[menuitem],1);
@@ -435,27 +475,25 @@ for(modenum=0;modenum<2;modenum++ ) {
 	paramtexts[modenum]=""+paramtexts[modenum]+menuname+namevalseparators[modenum]+menuvalarray[menuitem]+"\n";
 	menuitem++;
     } while (menuitem<lengthOf(menulistarray));
-    if (optional!="") { 
-	paramtexts[modenum]=""+paramtexts[modenum]+"optional"+namevalseparators[modenum]+optional+"\n"; 
-    }
-    paramtexts[modenum]=""+paramtexts[modenum]+"xmit"+namevalseparators[modenum]+xmit;
+    //    if (optional!="") { 
+    paramtexts[modenum]=""+paramtexts[modenum]+"optional"+namevalseparators[modenum]+optional+"\n"; 
+	//    }
+    paramtexts[modenum]=""+paramtexts[modenum]+"xmit"+namevalseparators[modenum]+xmit+"\n";
+    paramtexts[modenum]=""+paramtexts[modenum]+"recongui_date"+namevalseparators[modenum]+radishdate; //+"\n"
 }
+paramtexts[1]=paramtexts[1]+"\n"; //special line to clean up last line not haveing new line, but we only want to do that for the param file
+
 if(testmodebool==false) {
     //print("param file save to "+next_param_file);
     File.saveString(paramtexts[1],next_param_file); // saves to previous param file, each time, somewhat confusing... but suckit!
 }
 if(mode=="inline") {
     print(paramtexts[0]); 
+} else if( mode=="standalone" ) {
+    print(paramtexts[1]);
+    print("Please check the contents with \n    cat  "+next_param_file+"");
 }
-
     
-
-
-
-
-
-
-
 exit;
 
 
