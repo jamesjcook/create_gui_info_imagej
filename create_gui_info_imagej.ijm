@@ -543,5 +543,5 @@ if(mode=="inline") {
     print(paramtexts[1]);
     print("Please check the contents with \n    cat  "+next_param_file+"");
 }
-    
+run("Quit");    
 exit;
