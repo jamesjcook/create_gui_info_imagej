@@ -254,7 +254,7 @@ menulistelementsarray=""; // array of semi-colon seperated strings, one array el
 menuvalarray="";          // array of strings, the previous and currently selected values for each menutname item
 
 //default settings
-specidpattern="[0-9]{6}-[0-9]*:[0-9]*";
+specidpattern="([0-9]{6}-[0-9]*:[0-9]*)(;[0-9]{6}-[0-9]*:[0-9]*)*";
 specid="000000-1:0";
 xmit=0;
 optional="";
