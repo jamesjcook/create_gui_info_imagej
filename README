@@ -1,0 +1,9 @@
+create_gui_info_imagej
+an imagej macro to mimic the function of create gui info. 
+ImageJ because gui's are easy to work with, and it text process well with a subset of perl's functionality.
+Also, with some clever wizzardy it could be used in windows, or even used remotely with some fun ssh communication via text dump. 
+
+should be called with t/csh alias or bash function defined in radish_cshrc and radish_bashrc
+
+getting these to work is somewhat ugly, as passing parameters to the imagej macro is not particularly easy.
+See those sources for examples. 

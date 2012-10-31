@@ -22,23 +22,23 @@
 // This macro has 3 operating modes to satisify the different conditions under 
 // which param file code was called. 
 // mode 1 "standalone"
-//   input:   engine_raidhs_dependencies scanner paramfilename          
+//   input:   engine_raidsh_dependencies scanner paramfilename          
 //   output:  paramfile is output to dir_param_files/paramfilename 
 //   ex call: java -mx1600m -jar ij.jar -batch create_gui_info_imagej.imj engine_naxos_radish_dependencies onnes test.param
 // mode 2 "inline"
-//   input: 
-//   output:
+//   input: eninge_deps menu_file magnet
+//   output: echoed as name:::value pairs
 //   ex call: 
 // mode 3 "getvalidargs"
-//   input: 
-//   output:
+//   input: engine_deps menu_file 
+//   output: 
 //   ex call: 
 ////////////////////////////////////////////////////////////////////////////////
 
 
 //getVersion()
 requires(1.45);
-debuglevel=0;
+debuglevel=100;
 //// switching to a two mode setup,
 // expects 3-4 arguments in order,
 // mode1 standalone args: engine_deps scanner paramfile, output is a filled paramfile at paramdir/paramfile
@@ -67,10 +67,14 @@ debuglevel=0;
 arglist=getArgument();
 arglist=split(arglist," ");
 //scanner_tesla_pattern="([a-zA-Z]+[0-9]*([.][0-9]*)?t)";
-scanner_tesla_pattern="[A-z]?[0-9]+([.][0-9]+)?t";
+scanner_tesla_pattern="[A-z]?[0-9]+([.][0-9]+)?t"; // corresponding to the 7t b7t 9t stuff. could match a00.00t, which is [letter][decimalnumber]t
+// for non magnet scanners using [modality letter]+0.0t
 optional_field_length=240;
 valid_scanner_pattern="([a-zA-Z]+[0-9]*([.][0-9]*)?t)|([a-zA-Z._0-9]*)";
 engine_dependency_filepath=arglist[0]; // this should be passed by clever alias when called in standalone mode.
+if (!File.exists(engine_dependency_filepath) ) { 
+  exit("Could not find dependency file, cannot continue\nFile=<"+engine_dependency_filepath+">\n");
+ }
 dialogerrordisplaystring="";
 
 getDateAndTime(year, month, dayOfWeek, dayOfMonth, hour, minute, second, msec);
@@ -87,7 +91,9 @@ while(lengthOf(minute)<2) {minute="0"+minute;}
 second=toString(second);
 while(lengthOf(second)<2) {second="0"+second;}
 datetimestamp=""+year+month+dayOfMonth+hour+minute+second;
+datetimestamp=""; // We have decided that the date time stamp functionality is bad. It breaks radish_scale_bunch because radish_scale_bunch assumes a param file name, and this changes that name.
 radishdate=""+month+"/"+dayOfMonth+"/"+substring(year,2);
+
 if(lengthOf(arglist)>=2) {
     if (matches(arglist[1],valid_scanner_pattern) && lengthOf(arglist)==3 ) { 
 	// 
@@ -410,6 +416,7 @@ do {
     }
     Dialog.addString("specid:\t",specid,15);
     menuitem=0;
+    ignored_menuitems="";
     do {
 	menuname=substring(menulistarray[menuitem],1);
 	menuname=""+menuname+":"; // make display pretty by put colon on end of menuname before padding
@@ -417,12 +424,17 @@ do {
 	choices=split(menulistelementsarray[menuitem],";");
 	if(uselastsettings_boolean==0) { menudefault=""; } 
 	else { menudefault=menuvalarray[menuitem]; }
+	// could sneak an if there are any entries here to ignore any without options, maybe add to an ignored list to be displayted at bottom of menu.
+	//if (lengthOf(choices) >0 ) {
+	//ignored_menuitems=""+ignored_menuitems+menuname+" ";
+	//}
 	Dialog.addChoice(""+menuname+"\t",choices,menudefault);
 	menuitem++;
     } while (menuitem<lengthOf(menulistarray));
     Dialog.addNumber("xmit:\t",xmit,0,4,"");
     Dialog.addString("optional:\t",optional,80);
     Dialog.addCheckbox("Testmode:\tTest scan WILL NOT be admitted to database and Values are NOT SAVED.",false);
+    Dialog.addMessage("Ignored Items:"+ignored_menuitems);
     Dialog.show();
 
     ////
@@ -436,7 +448,11 @@ do {
 	//    arrayindex=parseInt(arrayindex);
 	//    if (arrayindex <=0 ) { exit("possible error with index into menulistarray at menuitem["+menuitem+"]"); }
 	menuname=substring(menulistarray[menuitem],1);
+	choices=split(menulistelementsarray[menuitem],";");
+	// could sneak an if there are any entries here to ignore any without options, maybe add to an ignored list to be displayted at bottom of menu.
+	//if (lengthOf(choices) >0 ) {
 	menuvalarray[arrayindex]=Dialog.getChoice();
+	//}
 	if(menuvalarray[arrayindex]==0) { outputgood=0; dialogerrordisplaystring=""+dialogerrordisplaystring+"bad output for item:"+menuname+"\n"; }
 	menuitem++;
     } while (menuitem<lengthOf(menulistarray));
@@ -535,7 +551,8 @@ next_param_file=engine_recongui_paramfile_directory+"/"+different_param_file_nam
 if(testmodebool==false) {
     //print("param file save to "+next_param_file);
     outval=File.saveString(paramtexts[1],next_param_file); // saves to previous param file, each time, somewhat confusing... but suckit!
-//    print("save out val="+outval);
+    wait(500);
+    print("save out val="+outval);
 }
 if(mode=="inline") {
     print(paramtexts[0]); 
