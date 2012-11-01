@@ -444,17 +444,17 @@ do {
 	if(uselastsettings_boolean==0) { menudefault=""; } else { menudefault=menuvalarray[menuitem]; }
 	// could sneak an if there are any entries here to ignore any without options, maybe add to an ignored list to be displayted at bottom of menu.
 
-	if (matches(menuname,".*xmit.*")) { 
-	    print("Choices 0 = "+choices[0]+"length is "+toString(lengthOf(choices))+"\n"); 
-	} else { 
-	    print(menuname+" Choices 0 = "+choices[0]+"length is "+toString(lengthOf(choices))+"");
-	}
+// 	if (matches(menuname,".*xmit.*")) { 
+// 	    print("Choices 0 = "+choices[0]+"length is "+toString(lengthOf(choices))+"\n"); 
+// 	} else { 
+// 	    print(menuname+" Choices 0 = "+choices[0]+"length is "+toString(lengthOf(choices))+"");
+// 	}
 	if (lengthOf(choices) >=2 ) { //lenght is 2 for 2 elements but max index would be 1 like c style string
 	    if (choices[1]!="Number"){ //choices[1]=="Number"
 		Dialog.addChoice(""+menuname+"\t",choices,menudefault);
 	    }else {
 		Dialog.addNumber(""+menuname+"\t",0,0,4,"");
-		print("expermental code for adding number to menu\n"); 
+//		print("expermental code for adding number to menu\n"); 
 	    }
 	} else if ( matches(menuname,".*(civmid|code).*")) {
 	    print("choices are being killed "+menulistelementsarray[menuitem]+"\n");
@@ -489,7 +489,7 @@ do {
 		if(debuglevel>=50) { print("recieved Choice "+menuname+"="+menuvalarray[arrayindex]); }
 	    } else {
 		menuvalarray[arrayindex]=Dialog.getNumber();
-		print("expermental code for adding number to menu\n"); 
+//		print("expermental code for adding number to menu\n"); 
 	    }		
 	} else if ( matches(menuname,".*(civmid|code).*")) {
 	    menuvalarray[arrayindex]=Dialog.getString();//""+menuname+"\t","<NOCHOICESFOUND>",20);
