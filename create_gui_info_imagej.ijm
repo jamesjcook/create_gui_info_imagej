@@ -1,4 +1,4 @@
-////////////////////////////////////////////////////////////////////////////////
+1////////////////////////////////////////////////////////////////////////////////
 // Create_gui_info_imagej
 // A feature compatabile replacement for the tcl gui for radish.
 // Imagej chosen for cross platform compatabiltiy, and minimal install size
@@ -126,7 +126,7 @@ if(lengthOf(arglist)>=2) {
 	    previous_param_file_name="create_gui_info_imagej_lastsettings_"+scanner+".param"; // last settings param/headfile.
 	    next_param_file_name=previous_param_file_name;
 	    modemessage="Function mode: "+mode+" - This is called during recon.";
-	    debuglevel=0;
+	    //	    debuglevel=100;
 	    useageerror=0;
 	} else {
 	    mode="getvalidargs";
@@ -261,10 +261,20 @@ menuvalarray="";          // array of strings, the previous and currently select
 
 //default settings
 specidpattern="([0-9]{6}-[0-9]*:[0-9]*)(;[0-9]{6}-[0-9]*:[0-9]*)*";
+codepattern="([0-9]{2}.[a-zA-Z]+.[0-9]{2})";
 specid="000000-1:0";
 xmit=0;
 optional="";
 length_of_longest_menuname=0;//setting to be used latter to make display pretty
+////
+// load recon_menu.txt
+////
+// buildsvariables  menuliststring, menuvalarray, number_menu_items, maxlength_menu_number, length_of_longest_menuname
+//    column header liststring of the form #menuname;#menuname2  to be split up later during display
+//    data columns, an array of liststrings with the values allowed for each header entry.
+//    number_menu_items, derp
+//    maxlength_menunumber, how long the number_menu_itmes value is as a string, this is to do evenly spaced digits later. 
+//    length_of_longest_menuname, holds the character count of the longest menuname, used during display.
 if(File.exists(""+engine_recongui_menu_path)) {
     reconmenu=File.openAsString(""+engine_recongui_menu_path);
     reconmenu=split(reconmenu,"\n");
@@ -274,21 +284,27 @@ if(File.exists(""+engine_recongui_menu_path)) {
 	// line should be split taking the first item as the value the second as the scanner list.
 	// menuvalue;
 	// scannerlist;
-	if (startsWith(line,"#")) { reconmenucomments=""+reconmenucomments+"\n"+line; if (debuglevel>=85 ) { print("commentline:"+line); } }
-	else if (matches(line,".*TYPE.*")){
+	if (startsWith(line,"#")) { // # comments ignore
+	    reconmenucomments=""+reconmenucomments+"\n"+line; if (debuglevel>=85 ) { print("commentline:"+line); } 
+	} else if (matches(line,".*TYPE.*")){
 	    //	    print ("typematch");
-	    if(startsWith(line,"ALLMENUTYPES")) {
+	    if(startsWith(line,"ALLMENUTYPES")) { //build the menuliststring, same as the ALLMENUTYPES line but it includes the array index for the menuvals
 		temparray=split(line, ";");
-		for(i=1;i<lengthOf(temparray);i++) {
+		
+		number_menu_items=lengthOf(temparray);                      //padhandling
+		maxlength_menunumber=lengthOf(toString(number_menu_items)); //padhandling
+		for(i=1;i<number_menu_items;i++) {                          //loop to build menuliststring
+		    paddedmenunum=toString(i-1);                            //padhandling
+		    while(lengthOf(paddedmenunum)<maxlength_menunumber) { paddedmenunum="0"+paddedmenunum; } //padd out number in array
 		    allmenus=""+allmenus+temparray[i]+" ";
 		    if (debuglevel>=90) { print(temparray[i]); }
 		    varlength=lengthOf(temparray[i]);
 		    if(length_of_longest_menuname<varlength) { length_of_longest_menuname=varlength; }
-		    menuliststring=""+menuliststring+toString(i-1)+temparray[i]+";";
+		    menuliststring=""+menuliststring+paddedmenunum+temparray[i]+";";
 		}
-		if (mode=="getvalidargs") {
-		    exit(""+allmenus+"specid xmit optional status");
-		}
+
+		if (mode=="getvalidargs") { exit(""+allmenus+"specid xmit optional status"); }//dumps the allmenus arg out and quits for the param file check where we check that we only specifiy valid params
+
 		menulistarray=split(menuliststring,";");
 		menulistelementsarray=newArray(i); //
 		menuvalarray=newArray(i);          //
@@ -308,9 +324,11 @@ if(File.exists(""+engine_recongui_menu_path)) {
 		scannerlist=substring(line,indexOf(line,";")+1);
 		if(matches(scannerlist,".*"+scanner+".*"))
 		    { // if our scanner is in the list of valid scanners for this option add
-			menuliststringpos=indexOf(menuliststring,menuname)-1;
+			//menuliststringpos=indexOf(menuliststring,menuname)-1;//maxlength_menunumber
+			menuliststringpos=indexOf(menuliststring,menuname)-maxlength_menunumber;
 			if (menuliststringpos <= -1 ) { exit("could not find menuname: <"+menuname+"> in list of all menunames: "+menuliststring); } // check for bad menusection
-			arrayindex=substring(menuliststring,menuliststringpos,menuliststringpos+1);
+			//arrayindex=substring(menuliststring,menuliststringpos,menuliststringpos+1);//maxlength_menunumber
+			arrayindex=substring(menuliststring,menuliststringpos,menuliststringpos+maxlength_menunumber);
 			arrayindex=parseInt(arrayindex);
 			menulistelementsarray[arrayindex]=""+menulistelementsarray[arrayindex]+";"+menuval;
 		    } else {
@@ -345,13 +363,15 @@ if(File.exists(previous_param_file))
 	  temp=split(line,"="); //splits each line into the menuname, value, menuname is temp[0], and value is temp[1]
 	  if(matches(menuliststring,".*"+temp[0]+".*")) // checks that this menuname is in our list of menuitms, else its ignored
 	      {
-		  menuliststringpos=indexOf(menuliststring,temp[0])-1;
-		  if (menuliststringpos <= -1) { exit("ERROR: could not find menuname: <"+temp[0]+"> in menulist <"+allmenus+">"); }
+		  menuliststringpos=indexOf(menuliststring,temp[0])-maxlength_menunumber;
+		  if (menuliststringpos <= -1) { exit("ERROR: could not find menuname: <"+temp[0]+"> in menulist <"+menuliststring+">"); }
 		  else {
-		      arrayindex=substring(menuliststring,menuliststringpos,menuliststringpos+1);
+		      arrayindex=substring(menuliststring,menuliststringpos,menuliststringpos+maxlength_menunumber);
 		      arrayindex=parseInt(arrayindex);
 		      if(matches(menulistelementsarray[arrayindex],".*"+temp[1]+".*")) {
 			  menuvalarray[arrayindex]=temp[1];
+
+			  if (debuglevel>=50) { print("Loaded value "+menuvalarray[arrayindex]+" to position "+arrayindex); }
 		      } else { 
 			  dialogerrordisplaystring=""+dialogerrordisplaystring+"invalid value for item: "+temp[0]+" with value: "+temp[1]+"\n";
 			  menuvalarray[arrayindex]=0;
@@ -365,7 +385,6 @@ if(File.exists(previous_param_file))
 		  } else { 
 		      dialogerrordisplaystring=""+dialogerrordisplaystring+"invalid value for item: "+temp[0]+" with value: "+specid+" does not match pattern:"+specidpattern+"\n";
 		  }
-	      } else if (startsWith(line,"xmit") ) { xmit=parseFloat(temp[1]); 
 	      } else if (startsWith(line,"optional") ) { optional=temp[1]; 
 	      } else if (matches(line, ".*(recongui_date|version_pm_Headfile|status|hfpmcnt).*")) {
 	      } else {
@@ -418,20 +437,35 @@ do {
     menuitem=0;
     ignored_menuitems="";
     do {
-	menuname=substring(menulistarray[menuitem],1);
+	menuname=substring(menulistarray[menuitem],maxlength_menunumber);
 	menuname=""+menuname+":"; // make display pretty by put colon on end of menuname before padding
 	while(lengthOf(menuname)<length_of_longest_menuname){ menuname=""+menuname+" "; } // make display pretty by pading end of menuname
 	choices=split(menulistelementsarray[menuitem],";");
-	if(uselastsettings_boolean==0) { menudefault=""; } 
-	else { menudefault=menuvalarray[menuitem]; }
+	if(uselastsettings_boolean==0) { menudefault=""; } else { menudefault=menuvalarray[menuitem]; }
 	// could sneak an if there are any entries here to ignore any without options, maybe add to an ignored list to be displayted at bottom of menu.
-	//if (lengthOf(choices) >0 ) {
-	//ignored_menuitems=""+ignored_menuitems+menuname+" ";
-	//}
-	Dialog.addChoice(""+menuname+"\t",choices,menudefault);
+
+	if (matches(menuname,".*xmit.*")) { 
+	    print("Choices 0 = "+choices[0]+"length is "+toString(lengthOf(choices))+"\n"); 
+	} else { 
+	    print(menuname+" Choices 0 = "+choices[0]+"length is "+toString(lengthOf(choices))+"");
+	}
+	if (lengthOf(choices) >=2 ) { //lenght is 2 for 2 elements but max index would be 1 like c style string
+	    if (choices[1]!="Number"){ //choices[1]=="Number"
+		Dialog.addChoice(""+menuname+"\t",choices,menudefault);
+	    }else {
+		Dialog.addNumber(""+menuname+"\t",0,0,4,"");
+		print("expermental code for adding number to menu\n"); 
+	    }
+	} else if ( matches(menuname,".*(civmid|code).*")) {
+	    print("choices are being killed "+menulistelementsarray[menuitem]+"\n");
+	    Dialog.addString(""+menuname+"\t","<NOCHOICESFOUND>",20);
+	    dialogerrordisplaystring=dialogerrordisplaystring+"Required menu "+menuname+" had no entries, MUST TELL LUCY/JAMES choice string="+menulistelementsarray[menuitem]+"\n";
+	} else {
+	  print("ignored menuitem  "+menuname+" with choices"+menulistelementsarray[menuitem]+"\n");
+	  ignored_menuitems=""+ignored_menuitems+menuname+" ";
+	}
 	menuitem++;
     } while (menuitem<lengthOf(menulistarray));
-    Dialog.addNumber("xmit:\t",xmit,0,4,"");
     Dialog.addString("optional:\t",optional,80);
     Dialog.addCheckbox("Testmode:\tTest scan WILL NOT be admitted to database and Values are NOT SAVED.",false);
     Dialog.addMessage("Ignored Items:"+ignored_menuitems);
@@ -444,19 +478,25 @@ do {
     specid=Dialog.getString();
     menuitem=0;
     do {
-	arrayindex=substring(menulistarray[menuitem],0,1);
-	//    arrayindex=parseInt(arrayindex);
-	//    if (arrayindex <=0 ) { exit("possible error with index into menulistarray at menuitem["+menuitem+"]"); }
-	menuname=substring(menulistarray[menuitem],1);
+	arrayindex=substring(menulistarray[menuitem],0,maxlength_menunumber);
+	menuname=substring(menulistarray[menuitem],maxlength_menunumber);
 	choices=split(menulistelementsarray[menuitem],";");
 	// could sneak an if there are any entries here to ignore any without options, maybe add to an ignored list to be displayted at bottom of menu.
-	//if (lengthOf(choices) >0 ) {
-	menuvalarray[arrayindex]=Dialog.getChoice();
-	//}
-	if(menuvalarray[arrayindex]==0) { outputgood=0; dialogerrordisplaystring=""+dialogerrordisplaystring+"bad output for item:"+menuname+"\n"; }
+	if (lengthOf(choices) >=2  ) { //lenght is 2 for 2 elements but max index would be 1 like c style string
+	    if (choices[1]!="Number"){ //choices[1]=="Number"
+		menuvalarray[arrayindex]=Dialog.getChoice();
+		if(menuvalarray[arrayindex]==0) { outputgood=0; dialogerrordisplaystring=""+dialogerrordisplaystring+"unset output for item:"+menuname+"\n"; }
+		if(debuglevel>=50) { print("recieved Choice "+menuname+"="+menuvalarray[arrayindex]); }
+	    } else {
+		menuvalarray[arrayindex]=Dialog.getNumber();
+		print("expermental code for adding number to menu\n"); 
+	    }		
+	} else if ( matches(menuname,".*(civmid|code).*")) {
+	    menuvalarray[arrayindex]=Dialog.getString();//""+menuname+"\t","<NOCHOICESFOUND>",20);
+	} 
 	menuitem++;
     } while (menuitem<lengthOf(menulistarray));
-    xmit=parseFloat(Dialog.getNumber());
+    
     optional=Dialog.getString();
     testmodebool=Dialog.getCheckbox();
     if(testmodebool==true) {
@@ -471,12 +511,38 @@ do {
 	    dialogerrordisplaystring="bad output for item:specid <"+specid+"> Please enter a valid specid\n"+dialogerrordisplaystring;
 	    outputgood=0;
 	}
-	if(xmit<=100.0 && xmit>=0) {//xmitgood do nothing
-	} else {//else set bad and display message
-	    //	    showMessageWithCancel("Bad xmit:<"+xmit+"> Xmit must be a number between 0-100.0");
-	    dialogerrordisplaystring=""+dialogerrordisplaystring+"Bad xmit:<"+xmit+"> Xmit must be a number between 0-100.0";
-	    outputgood=0;
-	}
+
+
+	menuitem=0;
+	do {
+	    arrayindex=substring(menulistarray[menuitem],0,maxlength_menunumber);
+	    menuname=substring(menulistarray[menuitem],maxlength_menunumber);
+	    choices=split(menulistelementsarray[menuitem],";");
+	    if (lengthOf(choices) >=2  ) { //lenght is 2 for 2 elements but max index would be 1 like c style string
+		if (choices[1]!="Number"){ //choices[1]=="Number"
+		    //		    if(menuvalarray[arrayindex]==0) { outputgood=0; dialogerrordisplaystring=""+dialogerrordisplaystring+"unset output for item:"+menuname+"\n"; }
+		    //menuvalarray[arrayindex]=Dialog.getChoice();
+		    //do no checking for choice values, 
+		} else {
+		    //if number
+		    if (matches(menuname,".*xmit.*")) {
+			if(parseFloat(menuvalarray[arrayindex])>100.0 || parseFloat(menuvalarray[arrayindex])<0) {//xmitgood do nothing
+			    dialogerrordisplaystring=""+dialogerrordisplaystring+"Bad xmit:<"+menuvalarray[arrayindex]+"> Xmit must be a number between 0-100.0";
+			    outputgood=0;
+			}
+		    }
+		}		
+	    } else if ( matches(menuname,".*code.*")) {
+		if ( !matches(menuvalarray[arrayindex],codepattern)){
+		    dialogerrordisplaystring=""+dialogerrordisplaystring+"Malformed code:<"+menuvalarray[arrayindex]+" should match pattern :"+codepattern+"\n";
+		    outputgood=0;
+		} else { 
+		    menulistelementsarray[menuitem]=""+menulistelementsarray[menuitem]+";"+menuvalarray[menuitem];
+		}
+	    } 
+	    menuitem++;
+	} while (menuitem<lengthOf(menulistarray));	
+
 	if(lengthOf(optional)>optional_field_length) {
 	    optionaldisplay=""; 
 	    optind=0;
@@ -495,14 +561,11 @@ do {
 	specid="test";
 	menuitem=0;
 	do {
-	    arrayindex=substring(menulistarray[menuitem],0,1);
-	    //    arrayindex=parseInt(arrayindex);
-	    //    if (arrayindex <=0 ) { exit("possible error with index into menulistarray at menuitem["+menuitem+"]"); }
-	    menuname=substring(menulistarray[menuitem],1);
+	    arrayindex=substring(menulistarray[menuitem],0,maxlength_menunumber);
+	    menuname=substring(menulistarray[menuitem],maxlength_menunumber);
 	    menuvalarray[arrayindex]="test";
 	    menuitem++;
 	} while (menuitem<lengthOf(menulistarray));
-	xmit="test";
 	optional="test";
     }
     uselastsettings_boolean=1;
@@ -532,15 +595,18 @@ menulistarray=split(menuliststring,";");
 for(modenum=0;modenum<2;modenum++ ) {
     menuitem=0;
     do {
-	menuname=substring(menulistarray[menuitem],1);
+	menuname=substring(menulistarray[menuitem],maxlength_menunumber);
 	choices=split(menulistelementsarray[menuitem],";");
-	paramtexts[modenum]=""+paramtexts[modenum]+menuname+namevalseparators[modenum]+menuvalarray[menuitem]+"\n";
+	// could sneak an if there are any entries here to ignore any without options, maybe add to an ignored list to be displayted at bottom of menu.
+	if (lengthOf(choices) >1 ) {
+	  paramtexts[modenum]=""+paramtexts[modenum]+menuname+namevalseparators[modenum]+menuvalarray[menuitem]+"\n";
+	}
 	menuitem++;
     } while (menuitem<lengthOf(menulistarray));
     //    if (optional!="") { 
     paramtexts[modenum]=""+paramtexts[modenum]+"optional"+namevalseparators[modenum]+optional+"\n"; 
 	//    }
-    paramtexts[modenum]=""+paramtexts[modenum]+"xmit"+namevalseparators[modenum]+xmit+"\n";
+    //    paramtexts[modenum]=""+paramtexts[modenum]+"xmit"+namevalseparators[modenum]+xmit+"\n";
     paramtexts[modenum]=""+paramtexts[modenum]+"status"+namevalseparators[modenum]+"ok\n";
     paramtexts[modenum]=""+paramtexts[modenum]+"recongui_date"+namevalseparators[modenum]+radishdate; //+"\n"
     
