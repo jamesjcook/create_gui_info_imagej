@@ -457,11 +457,11 @@ do {
 //		print("expermental code for adding number to menu\n"); 
 	    }
 	} else if ( matches(menuname,".*(civmid|code).*")) {
-	    print("choices are being killed "+menulistelementsarray[menuitem]+"\n");
+	    if(debuglevel>=85) { print("choices are being killed "+menulistelementsarray[menuitem]+"\n"); }
 	    Dialog.addString(""+menuname+"\t","<NOCHOICESFOUND>",20);
 	    dialogerrordisplaystring=dialogerrordisplaystring+"Required menu "+menuname+" had no entries, MUST TELL LUCY/JAMES choice string="+menulistelementsarray[menuitem]+"\n";
 	} else {
-	  print("ignored menuitem  "+menuname+" with choices"+menulistelementsarray[menuitem]+"\n");
+	    if(debuglevel>=50) { print("ignored menuitem  "+menuname+" with choices"+menulistelementsarray[menuitem]+"\n"); } 
 	  ignored_menuitems=""+ignored_menuitems+menuname+" ";
 	}
 	menuitem++;
