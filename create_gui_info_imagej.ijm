@@ -1,4 +1,4 @@
-1////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 // Create_gui_info_imagej
 // A feature compatabile replacement for the tcl gui for radish.
 // Imagej chosen for cross platform compatabiltiy, and minimal install size
@@ -24,7 +24,7 @@
 // mode 1 "standalone"
 //   input:   engine_raidsh_dependencies scanner paramfilename          
 //   output:  paramfile is output to dir_param_files/paramfilename 
-//   ex call: java -mx1600m -jar ij.jar -batch create_gui_info_imagej.imj engine_naxos_radish_dependencies onnes test.param
+//   ex call: java -mx1600m -jar ij.jar -batch create_gui_info_imagej.ijm engine_naxos_radish_dependencies onnes test.param
 // mode 2 "inline"
 //   input: eninge_deps menu_file magnet
 //   output: echoed as name:::value pairs
@@ -38,7 +38,7 @@
 
 //getVersion()
 requires(1.45);
-debuglevel=100;
+debuglevel=00;
 //// switching to a two mode setup,
 // expects 3-4 arguments in order,
 // mode1 standalone args: engine_deps scanner paramfile, output is a filled paramfile at paramdir/paramfile
@@ -394,14 +394,14 @@ if(File.exists(previous_param_file))
 	  else {
 	      if(!startsWith(line,"optional=")) {
 		      dialogerrordisplaystring=""+dialogerrordisplaystring+"BAD LINE AT LINENUM:"+linenum+"<"+line+">\n"; }
-	      if (debuglevel>=35) { print("ignoring line <"+line+">"); }
+	      if (debuglevel>=50) { print("ignoring line <"+line+">"); }
 	  }
 	  linenum++;
       } while(linenum<lengthOf(paramsettings));
       uselastsettings_boolean=getBoolean("Use last saved values?");
   } else {
     next_param_file_name=previous_param_file_name;
-    if (debuglevel>=35 ){ print("No previous param file found at "+previous_param_file+". Or No param file specified."); }
+    if (debuglevel>=55 ){ print("No previous param file found at "+previous_param_file+". Or No param file specified."); }
     uselastsettings_boolean=0;
 }
 if(uselastsettings_boolean==1) {
