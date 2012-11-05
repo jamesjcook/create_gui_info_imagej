@@ -128,15 +128,19 @@ if(lengthOf(arglist)>=2) {
 	    modemessage="Function mode: "+mode+" - This is called during recon.";
 	    //	    debuglevel=100;
 	    useageerror=0;
-	} else {
+	} else if (arglist[3]=="check") {
+	    //mode 3 getvalidparam names
 	    mode="getvalidargs";
 	    menu_file=arglist[1];
-	    scanner="";
+	    scanner=arglist[2];
+	    //	    ischeck=arglist[3];
 	    previous_param_file_name="";
 	    next_param_file_name=previous_param_file_name;
 	    modemessage="Function mode: "+mode+" - This is called during recon, when only the recon menu text is used";
 	    //	    debuglevel=100;
 	    useageerror=0;	    
+	} else { 
+	    
 	}
     } else {
 	useageerror=1;
@@ -262,6 +266,8 @@ menuvalarray="";          // array of strings, the previous and currently select
 //default settings
 specidpattern="([0-9]{6}-[0-9]*:[0-9]*)(;[0-9]{6}-[0-9]*:[0-9]*)*";
 codepattern="([0-9]{2}.[a-zA-Z]+.[0-9]{2})";
+//runnopattern="([A-Z][0-9]{5,}([A-Za-z_-][A-Za-z0-9_-])*)";
+runnopattern="([A-Z][0-9]{5,}([A-Za-z_-][A-Za-z0-9_-]*)?)";	
 specid="000000-1:0";
 xmit=0;
 optional="";
@@ -296,15 +302,11 @@ if(File.exists(""+engine_recongui_menu_path)) {
 		for(i=1;i<number_menu_items;i++) {                          //loop to build menuliststring
 		    paddedmenunum=toString(i-1);                            //padhandling
 		    while(lengthOf(paddedmenunum)<maxlength_menunumber) { paddedmenunum="0"+paddedmenunum; } //padd out number in array
-		    allmenus=""+allmenus+temparray[i]+" ";
 		    if (debuglevel>=90) { print(temparray[i]); }
 		    varlength=lengthOf(temparray[i]);
 		    if(length_of_longest_menuname<varlength) { length_of_longest_menuname=varlength; }
 		    menuliststring=""+menuliststring+paddedmenunum+temparray[i]+";";
 		}
-
-		if (mode=="getvalidargs") { exit(""+allmenus+"specid xmit optional status"); }//dumps the allmenus arg out and quits for the param file check where we check that we only specifiy valid params
-
 		menulistarray=split(menuliststring,";");
 		menulistelementsarray=newArray(i); //
 		menuvalarray=newArray(i);          //
@@ -331,6 +333,9 @@ if(File.exists(""+engine_recongui_menu_path)) {
 			arrayindex=substring(menuliststring,menuliststringpos,menuliststringpos+maxlength_menunumber);
 			arrayindex=parseInt(arrayindex);
 			menulistelementsarray[arrayindex]=""+menulistelementsarray[arrayindex]+";"+menuval;
+			if (  ! matches(allmenus,".*"+menuname+".*")) {
+			    allmenus=""+allmenus+menuname+" ";
+			}
 		    } else {
 		    if ( debuglevel>=85) { print("menuvalue: "+menuval+" had no valid scanner in "+scannerlist); }
 		}
@@ -345,6 +350,11 @@ if(File.exists(""+engine_recongui_menu_path)) {
 } else {
     exit("ERROR could not find recon_menu file "+engine_recongui_menu_path);
 }
+////
+//dumps the allmenus arg out and quits for the param file check where we check that we only specifiy valid params
+////
+if (mode=="getvalidargs") { exit(""+allmenus+"specid xmit optional status"); }
+
 if (debuglevel >= 65) { Array.print(menulistelementsarray); }
 uselastsettings_boolean=0;
 // Load Vars saved last time
@@ -368,10 +378,17 @@ if(File.exists(previous_param_file))
 		  else {
 		      arrayindex=substring(menuliststring,menuliststringpos,menuliststringpos+maxlength_menunumber);
 		      arrayindex=parseInt(arrayindex);
-		      if(matches(menulistelementsarray[arrayindex],".*"+temp[1]+".*")) {
-			  menuvalarray[arrayindex]=temp[1];
-
-			  if (debuglevel>=50) { print("Loaded value "+menuvalarray[arrayindex]+" to position "+arrayindex); }
+		      choices=split(menulistelementsarray[arrayindex],";");
+		      //		      if(
+		      //if (choices[1]=="Number" || choices[1]=="String"){ //choices[1]=="Number"
+		      if(lengthOf(choices)>=2) { 
+			  if(matches(menulistelementsarray[arrayindex],".*"+temp[1]+".*") 
+			     || choices[1]=="Number" 
+			     || choices[1]=="String" ) {
+			      menuvalarray[arrayindex]=temp[1];
+			      
+			      if (debuglevel>=50) { print("Loaded value "+menuvalarray[arrayindex]+" to position "+arrayindex); }
+			  }
 		      } else { 
 			  dialogerrordisplaystring=""+dialogerrordisplaystring+"invalid value for item: "+temp[0]+" with value: "+temp[1]+"\n";
 			  menuvalarray[arrayindex]=0;
@@ -388,7 +405,7 @@ if(File.exists(previous_param_file))
 	      } else if (startsWith(line,"optional") ) { optional=temp[1]; 
 	      } else if (matches(line, ".*(recongui_date|version_pm_Headfile|status|hfpmcnt).*")) {
 	      } else {
-		  dialogerrordisplaystring=""+dialogerrordisplaystring+"invalid name  for item: "+temp[0]+" with value:"+temp[1]+" name not in ALLMENUTYPES list, Do you have the right scanner?\n ";//recon menu ALLMENUTYPES line must have been updated to remove this\n";
+		  dialogerrordisplaystring=""+dialogerrordisplaystring+"invalid name for item: "+temp[0]+" with value:"+temp[1]+" name not in ALLMENUTYPES list, Do you have the right scanner?\n ";//recon menu ALLMENUTYPES line must have been updated to remove this\n";
 	      }
 	  }
 	  else {
@@ -450,16 +467,22 @@ do {
 // 	    print(menuname+" Choices 0 = "+choices[0]+"length is "+toString(lengthOf(choices))+"");
 // 	}
 	if (lengthOf(choices) >=2 ) { //lenght is 2 for 2 elements but max index would be 1 like c style string
-	    if (choices[1]!="Number"){ //choices[1]=="Number"
+	    if (choices[1]!="Number" && choices[1]!="String"){ //choices[1]=="Number"
 		Dialog.addChoice(""+menuname+"\t",choices,menudefault);
-	    }else {
-		Dialog.addNumber(""+menuname+"\t",0,0,4,"");
-//		print("expermental code for adding number to menu\n"); 
+	    } else if(choices[1]=="Number") {
+		Dialog.addNumber(""+menuname+"\t",0,0,4,menudefault);
+		//		print("expermental code for adding number to menu\n"); 
+	    } else if(choices[1]=="String") {
+		if (lengthOf(choices)>=3 && (toString(menudefault)=="" || toString(menudefault)=="0")) {
+		    menudefault=choices[2];
+		}
+		Dialog.addString(""+menuname+"\t",menudefault,20);
+		//		print("expermental code for adding string to menu\n"); 
 	    }
 	} else if ( matches(menuname,".*(civmid|code).*")) {
 	    if(debuglevel>=85) { print("choices are being killed "+menulistelementsarray[menuitem]+"\n"); }
-	    Dialog.addString(""+menuname+"\t","<NOCHOICESFOUND>",20);
-	    dialogerrordisplaystring=dialogerrordisplaystring+"Required menu "+menuname+" had no entries, MUST TELL LUCY/JAMES choice string="+menulistelementsarray[menuitem]+"\n";
+	    Dialog.addString(""+menuname+"\t","NO_PROJECTS_REGISTERED",20);
+	    dialogerrordisplaystring=dialogerrordisplaystring+"Required menu "+menuname+" had no entries, MUST TELL LUCY/JAMES \n";//choice string="+menulistelementsarray[menuitem]+"\n";
 	} else {
 	    if(debuglevel>=50) { print("ignored menuitem  "+menuname+" with choices"+menulistelementsarray[menuitem]+"\n"); } 
 	  ignored_menuitems=""+ignored_menuitems+menuname+" ";
@@ -483,14 +506,17 @@ do {
 	choices=split(menulistelementsarray[menuitem],";");
 	// could sneak an if there are any entries here to ignore any without options, maybe add to an ignored list to be displayted at bottom of menu.
 	if (lengthOf(choices) >=2  ) { //lenght is 2 for 2 elements but max index would be 1 like c style string
-	    if (choices[1]!="Number"){ //choices[1]=="Number"
+	    if (choices[1]!="Number" && choices[1]!="String"){ //should switch this around to be the else condition 
 		menuvalarray[arrayindex]=Dialog.getChoice();
 		if(menuvalarray[arrayindex]==0) { outputgood=0; dialogerrordisplaystring=""+dialogerrordisplaystring+"unset output for item:"+menuname+"\n"; }
 		if(debuglevel>=50) { print("recieved Choice "+menuname+"="+menuvalarray[arrayindex]); }
-	    } else {
+	    } else if(choices[1]=="Number" ) {
 		menuvalarray[arrayindex]=Dialog.getNumber();
-//		print("expermental code for adding number to menu\n"); 
-	    }		
+		//		print("expermental code for adding number to menu\n"); 
+	    } else if(choices[1]=="String") {
+		menuvalarray[arrayindex]=Dialog.getString();//Dialog.addString(""+menuname+"\t",menudefault,20);
+		//		print("expermental code for adding string to menu\n"); 
+	    }	
 	} else if ( matches(menuname,".*(civmid|code).*")) {
 	    menuvalarray[arrayindex]=Dialog.getString();//""+menuname+"\t","<NOCHOICESFOUND>",20);
 	} 
@@ -519,22 +545,31 @@ do {
 	    menuname=substring(menulistarray[menuitem],maxlength_menunumber);
 	    choices=split(menulistelementsarray[menuitem],";");
 	    if (lengthOf(choices) >=2  ) { //lenght is 2 for 2 elements but max index would be 1 like c style string
-		if (choices[1]!="Number"){ //choices[1]=="Number"
-		    //		    if(menuvalarray[arrayindex]==0) { outputgood=0; dialogerrordisplaystring=""+dialogerrordisplaystring+"unset output for item:"+menuname+"\n"; }
-		    //menuvalarray[arrayindex]=Dialog.getChoice();
-		    //do no checking for choice values, 
-		} else {
+// 		if (choices[1]!="Number" && choices[1]!="String"){ //choices[1]=="Number"
+		    
+// 		    //		    if(menuvalarray[arrayindex]==0) { outputgood=0; dialogerrordisplaystring=""+dialogerrordisplaystring+"unset output for item:"+menuname+"\n"; }
+// 		    //menuvalarray[arrayindex]=Dialog.getChoice();
+// 		    //do no checking for choice values, 
+// 		} else {
 		    //if number
 		    if (matches(menuname,".*xmit.*")) {
 			if(parseFloat(menuvalarray[arrayindex])>100.0 || parseFloat(menuvalarray[arrayindex])<0) {//xmitgood do nothing
-			    dialogerrordisplaystring=""+dialogerrordisplaystring+"Bad xmit:<"+menuvalarray[arrayindex]+"> Xmit must be a number between 0-100.0";
+			    dialogerrordisplaystring=""+dialogerrordisplaystring+"Bad xmit:<"+menuvalarray[arrayindex]+"> Xmit must be a number between 0-100.0\n";
 			    outputgood=0;
 			}
+		    } else if (matches(menuname,".*runno.*")) { 
+			if (! matches(menuvalarray[arrayindex],runnopattern)) {
+			    dialogerrordisplaystring=""+dialogerrordisplaystring+"Bad Runnumber:<"+menuvalarray[arrayindex]+"> Runnumber must match pattern "+runnopattern+"\n";
+			    outputgood=0;
+			}
+		    } else { 
+			//was drop down no error checking required
 		    }
-		}		
+			 
+		    //}		
 	    } else if ( matches(menuname,".*code.*")) {
 		if ( !matches(menuvalarray[arrayindex],codepattern)){
-		    dialogerrordisplaystring=""+dialogerrordisplaystring+"Malformed code:<"+menuvalarray[arrayindex]+" should match pattern :"+codepattern+"\n";
+		    dialogerrordisplaystring=""+dialogerrordisplaystring+"Malformed code:<"+menuvalarray[arrayindex]+"> should match pattern :"+codepattern+"\n";
 		    outputgood=0;
 		} else { 
 		    menulistelementsarray[menuitem]=""+menulistelementsarray[menuitem]+";"+menuvalarray[menuitem];
