@@ -471,18 +471,22 @@ do {
 		Dialog.addChoice(""+menuname+"\t",choices,menudefault);
 	    } else if(choices[1]=="Number") {
 		Dialog.addNumber(""+menuname+"\t",0,0,4,menudefault);
-		//		print("expermental code for adding number to menu\n"); 
 	    } else if(choices[1]=="String") {
 		if (lengthOf(choices)>=3 && (toString(menudefault)=="" || toString(menudefault)=="0")) {
 		    menudefault=choices[2];
 		}
 		Dialog.addString(""+menuname+"\t",menudefault,20);
-		//		print("expermental code for adding string to menu\n"); 
 	    }
-	} else if ( matches(menuname,".*(civmid|code).*")) {
+	} else if ( matches(menuname,".*(civmid).*")) {
 	    if(debuglevel>=85) { print("choices are being killed "+menulistelementsarray[menuitem]+"\n"); }
-	    Dialog.addString(""+menuname+"\t","NO_PROJECTS_REGISTERED",20);
+	    Dialog.addString(""+menuname+"\t","NO_USERS_REGISTERED",20);
 	    dialogerrordisplaystring=dialogerrordisplaystring+"Required menu "+menuname+" had no entries, MUST TELL LUCY/JAMES \n";//choice string="+menulistelementsarray[menuitem]+"\n";
+	} else if ( matches(menuname,".*(code).*")) {
+	    //	    Dialog.addString(""+menuname+"\t","NO_USERS_REGISTERED",20);
+	    //	    dialogerrordisplaystring=dialogerrordisplaystring+"Required menu "+menuname+" had no entries, MUST TELL LUCY/JAMES \n";//choice string="+menulistelementsarray[menuitem]+"\n";
+	    waitForUser("NO PROJECT CODE ERROR\n"+"ERROR: CANNOT CONTINUE\nTHERE IS NO REGISTERED CODE FOR THIS SCANNER!\n\nTell lucy and james immediately that scanner:"+scanner+" has no entries!\n");
+	    //showMessageWithCancel
+	    exit("ERROR:ERROR:ERROR:ERROR:ERROR:ERROR:ERROR:ERROR:ERROR:ERROR:ERROR:ERROR:ERROR:ERROR:ERROR:ERROR:ERROR:ERROR:");
 	} else {
 	    if(debuglevel>=50) { print("ignored menuitem  "+menuname+" with choices"+menulistelementsarray[menuitem]+"\n"); } 
 	  ignored_menuitems=""+ignored_menuitems+menuname+" ";
