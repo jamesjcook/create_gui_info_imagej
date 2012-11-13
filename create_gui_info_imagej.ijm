@@ -30,7 +30,7 @@
 //   output: echoed as name:::value pairs
 //   ex call: 
 // mode 3 "getvalidargs"
-//   input: engine_deps menu_file 
+//   input: engine_deps menu_file magnet check
 //   output: 
 //   ex call: 
 ////////////////////////////////////////////////////////////////////////////////
@@ -143,6 +143,7 @@ if(lengthOf(arglist)>=2) {
 	    
 	}
     } else {
+	exit("COULD NOT GET RECON MENU.txt file!");
 	useageerror=1;
     }
 } else { useageerror=1; }
