@@ -69,7 +69,7 @@ arglist=split(arglist," ");
 //scanner_tesla_pattern="([a-zA-Z]+[0-9]*([.][0-9]*)?t)";
 scanner_tesla_pattern="[A-z]?[0-9]+([.][0-9]+)?t"; // corresponding to the 7t b7t 9t stuff. could match a00.00t, which is [letter][decimalnumber]t
 // for non magnet scanners using [modality letter]+0.0t
-optional_field_length=240;
+optional_field_length=80;
 valid_scanner_pattern="([a-zA-Z]+[0-9]*([.][0-9]*)?t)|([a-zA-Z._0-9]*)";
 engine_dependency_filepath=arglist[0]; // this should be passed by clever alias when called in standalone mode.
 if (!File.exists(engine_dependency_filepath) ) { 
