@@ -128,7 +128,8 @@ if(lengthOf(arglist)>=2) {
 	    modemessage="Function mode: "+mode+" - This is called during recon.";
 	    //	    debuglevel=100;
 	    useageerror=0;
-	} else if (arglist[3]=="check") {
+	} else if(lengthOf(arglist)==4) {
+	    if (arglist[3]=="check") {
 	    //mode 3 getvalidparam names
 	    mode="getvalidargs";
 	    menu_file=arglist[1];
@@ -140,7 +141,7 @@ if(lengthOf(arglist)>=2) {
 	    //	    debuglevel=100;
 	    useageerror=0;	    
 	} else { 
-	    
+	    useageerror=1;	    
 	}
     } else {
 	exit("COULD NOT GET RECON MENU.txt file!");
