@@ -100,6 +100,7 @@ if(lengthOf(arglist)>=2) {
 	// mode 1 standalone
 	mode="standalone";
 	debuglevel=49;
+	debuglevel=100;
 	scanner=arglist[1];
 	param_file_prefix=arglist[2];
 	previous_param_file_name=""+param_file_prefix; //+".param";
@@ -326,7 +327,22 @@ if(File.exists(""+engine_recongui_menu_path)) {
 	    if(indexOf(line,";")>=0) {
 		menuval=substring(line,0,indexOf(line,";"));
 		scannerlist=substring(line,indexOf(line,";")+1);
-		if(matches(scannerlist,".*"+scanner+".*"))
+		////
+		// this simple line mostly works for scanners which are not short named similarly,
+                // however if onescanner's name is contained in another this creates a partial match,
+		//  hopefully new lines below fixes that, patch goes to if(match)
+		//if(matches(scannerlist,".*"+scanner+".*")) 
+		scannerarray=split(scannerlist,";");
+		match=false;
+		for(i=0;i<lengthOf(scannerarray);i++){ 
+		    if(matches(scannerarray[i],"^"+scanner+"$"))
+			{
+			    match=true;
+			    i=lengthOf(scannerarray); // in lieu of a break statement
+			}
+		}
+		if(match)
+		////
 		    { // if our scanner is in the list of valid scanners for this option add
 			//menuliststringpos=indexOf(menuliststring,menuname)-1;//maxlength_menunumber
 			menuliststringpos=indexOf(menuliststring,menuname)-maxlength_menunumber;
