@@ -39,7 +39,7 @@
 //getVersion()
 requires(1.45);
 debuglevel=00;
-//// switching to a two mode setup,
+//// switching to a three mode setup,
 // expects 3-4 arguments in order,
 // mode1 standalone args: engine_deps scanner paramfile, output is a filled paramfile at paramdir/paramfile
 //   mode 1 replces create_paramfile.perl from tcl_dir and/or create_gui_paramfile.perl from create_gui_paramfile
@@ -94,13 +94,13 @@ datetimestamp=""+year+month+dayOfMonth+hour+minute+second;
 datetimestamp=""; // We have decided that the date time stamp functionality is bad. It breaks radish_scale_bunch because radish_scale_bunch assumes a param file name, and this changes that name.
 radishdate=""+month+"/"+dayOfMonth+"/"+substring(year,2);
 
+useageerror=1; //init to usage-error true
 if(lengthOf(arglist)>=2) {
     if (matches(arglist[1],valid_scanner_pattern) && lengthOf(arglist)==3 ) { 
 	// 
 	// mode 1 standalone
 	mode="standalone";
-	debuglevel=49;
-	debuglevel=100;
+	//	debuglevel=100;
 	scanner=arglist[1];
 	param_file_prefix=arglist[2];
 	previous_param_file_name=""+param_file_prefix; //+".param";
@@ -118,9 +118,10 @@ if(lengthOf(arglist)>=2) {
 	modemessage="Function mode: "+mode+" - Standalone called via cmdprompt to prepare a param file before calling radish\n"; 
 	//Tried to load: "+previous_param_file_name;
 	useageerror=0;
+	print("mode:"+mode);
     } else if(File.exists(arglist[1])) {
 	if(lengthOf(arglist)==3) {
-	//mode 2 inline
+	    //mode 2 inline
 	    mode="inline";
 	    menu_file=arglist[1];
 	    scanner=arglist[2]; // exptcted as scanner name or tesla.
@@ -129,26 +130,29 @@ if(lengthOf(arglist)>=2) {
 	    modemessage="Function mode: "+mode+" - This is called during recon.";
 	    //	    debuglevel=100;
 	    useageerror=0;
+	    print("mode:"+mode);
 	} else if(lengthOf(arglist)==4) {
 	    if (arglist[3]=="check") {
-	    //mode 3 getvalidparam names
-	    mode="getvalidargs";
-	    menu_file=arglist[1];
-	    scanner=arglist[2];
-	    //	    ischeck=arglist[3];
-	    previous_param_file_name="";
-	    next_param_file_name=previous_param_file_name;
-	    modemessage="Function mode: "+mode+" - This is called during recon, when only the recon menu text is used";
-	    //	    debuglevel=100;
-	    useageerror=0;	    
-	} else { 
-	    useageerror=1;	    
+		//mode 3 getvalidparam names
+		mode="getvalidargs";
+		menu_file=arglist[1];
+		scanner=arglist[2];
+		//	    ischeck=arglist[3];
+		previous_param_file_name="";
+		next_param_file_name=previous_param_file_name;
+		modemessage="Function mode: "+mode+" - This is called during recon, when only the recon menu text is used";
+		//	    debuglevel=100;
+		useageerror=0;	    
+		print("mode:"+mode);
+	    } else { 
+		useageerror=1;	    
+	    }
+	} else {
+	    exit("COULD NOT GET RECON MENU.txt file!");
+	    useageerror=1;
 	}
-    } else {
-	exit("COULD NOT GET RECON MENU.txt file!");
-	useageerror=1;
-    }
-} else { useageerror=1; }
+    } 
+}
 if (useageerror==1) {
     args="";
     argcount=lengthOf(arglist)-1;
