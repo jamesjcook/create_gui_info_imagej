@@ -118,7 +118,6 @@ if(lengthOf(arglist)>=2) {
 	modemessage="Function mode: "+mode+" - Standalone called via cmdprompt to prepare a param file before calling radish\n"; 
 	//Tried to load: "+previous_param_file_name;
 	useageerror=0;
-	print("mode:"+mode);
     } else if(File.exists(arglist[1])) {
 	if(lengthOf(arglist)==3) {
 	    //mode 2 inline
@@ -130,7 +129,6 @@ if(lengthOf(arglist)>=2) {
 	    modemessage="Function mode: "+mode+" - This is called during recon.";
 	    //	    debuglevel=100;
 	    useageerror=0;
-	    print("mode:"+mode);
 	} else if(lengthOf(arglist)==4) {
 	    if (arglist[3]=="check") {
 		//mode 3 getvalidparam names
@@ -143,7 +141,6 @@ if(lengthOf(arglist)>=2) {
 		modemessage="Function mode: "+mode+" - This is called during recon, when only the recon menu text is used";
 		//	    debuglevel=100;
 		useageerror=0;	    
-		print("mode:"+mode);
 	    } else { 
 		useageerror=1;	    
 	    }
