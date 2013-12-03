@@ -181,6 +181,11 @@ if ( !matches(scanner,scanner_tesla_pattern) && mode !="getvalidargs" ) {
     RADISH_RECON_DIR=File.getParent(engine_dependency_filepath);   // pull main recondir from the engine_dependency_filepathpath
     scanner_dependency_filename="scanner_"+scanner+"_radish_dependencies";
     scanner_dependency_filepath=""+RADISH_RECON_DIR+"/"+scanner_dependency_filename;
+    if ( ! File.exists(scanner_dependency_filepath) ) {
+	RADISH_RECON_DIR=File.getParent(RADISH_RECON_DIR)+"\\scanner_deps";   // pull main recondir from the engine_dependency_filepathpath
+	scanner_dependency_filename="scanner_"+scanner+"_radish_dependencies";
+	scanner_dependency_filepath=""+RADISH_RECON_DIR+"\\"+scanner_dependency_filename;
+    }
 } else {
     // need somehow to say if we've got a bogus scanner tesla value, not sure where to do that. 
     dialogerrordisplaystring="Scanner Tesla Specified directly, Empty Drop down menus indicates bad scanner tesla. Try using a name.\n";
