@@ -178,14 +178,32 @@ Standard Usage: create_info_gui_imagej scanner new_file_name\
 // if scanner is given as a name instead of a tesla value figure out the scanner dependecny file and load that to get the scanner_tesla
 if ( !matches(scanner,scanner_tesla_pattern) && mode !="getvalidargs" ) {
     getscannertesla=1;
+
+    // handle old style scanner_deps
     RADISH_RECON_DIR=File.getParent(engine_dependency_filepath);   // pull main recondir from the engine_dependency_filepathpath
     scanner_dependency_filename="scanner_"+scanner+"_radish_dependencies";
     scanner_dependency_filepath=""+RADISH_RECON_DIR+"/"+scanner_dependency_filename;
-    if ( ! File.exists(scanner_dependency_filepath) ) {
+
+    //try new style scanner_deps
+    if ( ! File.exists(scanner_dependency_filepath) ) { // try oldschool paths.
+	if(debuglevel>=25 ){ print("file not found: "+scanner_dependency_filepath); }
+	RADISH_RECON_DIR=File.getParent(RADISH_RECON_DIR)+"//scanner_deps";   // pull main recondir from the engine_dependency_filepathpath
+	scanner_dependency_filename="scanner_"+scanner+"_radish_dependencies";
+	scanner_dependency_filepath=""+RADISH_RECON_DIR+"//"+scanner_dependency_filename;
+	
+    }
+    if ( ! File.exists(scanner_dependency_filepath) ) { // try oldschool paths.
+	if(debuglevel>=25 ){ print("file not found: "+scanner_dependency_filepath); }
 	RADISH_RECON_DIR=File.getParent(RADISH_RECON_DIR)+"\\scanner_deps";   // pull main recondir from the engine_dependency_filepathpath
 	scanner_dependency_filename="scanner_"+scanner+"_radish_dependencies";
 	scanner_dependency_filepath=""+RADISH_RECON_DIR+"\\"+scanner_dependency_filename;
     }
+    if ( ! File.exists(scanner_dependency_filepath) ) { // try oldschool paths.
+    //if(debuglevel>=5 ){
+    print("file not found: "+scanner_dependency_filepath);
+	//};
+    }
+
 } else {
     // need somehow to say if we've got a bogus scanner tesla value, not sure where to do that. 
     dialogerrordisplaystring="Scanner Tesla Specified directly, Empty Drop down menus indicates bad scanner tesla. Try using a name.\n";
@@ -216,8 +234,11 @@ if(getscannertesla==1) {
 	scannersettings=split(scannersettings,"\n");
 	for(linenum=0;linenum<scannersettings.length;linenum++) {
 	    temp=split(scannersettings[linenum],"=");
-	    if(matches(temp[0],"scanner_tesla")) {
-		scanner=temp[1];
+	    if(temp.length>=2 ) {
+		if(matches(temp[0],"scanner_tesla")) {
+		    scanner=temp[1];
+		    if(debuglevel>=25 ){ print("Found scanner tesla: "+scanner+".\n"); }
+		}
 	    }
 	}
     } else {
@@ -312,11 +333,17 @@ if(File.exists(""+engine_recongui_menu_path)) {
 		    paddedmenunum=toString(i-1);                            //padhandling
 		    while(lengthOf(paddedmenunum)<maxlength_menunumber) { paddedmenunum="0"+paddedmenunum; } //padd out number in array
 		    if (debuglevel>=90) { print(temparray[i]); }
-		    varlength=lengthOf(temparray[i]);
+		    varlength=lengthOf(temparray[i]);// set the longest menuname.
 		    if(length_of_longest_menuname<varlength) { length_of_longest_menuname=varlength; }
-		    menuliststring=""+menuliststring+paddedmenunum+temparray[i]+";";
+		    menuliststring=""+menuliststring+paddedmenunum+temparray[i];
+		    if( i<number_menu_items){
+			menuliststring=""+menuliststring+";";}
+		    //temparray[i]=""+paddedmenunum+temparray[i]; // used with join, but there is no join :(
 		}
+
 		menulistarray=split(menuliststring,";");
+		//menulistarray=join(temparray,";");// no join function :(
+
 		menulistelementsarray=newArray(i); //
 		menuvalarray=newArray(i);          //
 		for(i=0;i<lengthOf(menuvalarray);i++) { menuvalarray[i]=""; }
@@ -383,6 +410,10 @@ if (debuglevel >= 65) { Array.print(menulistelementsarray); }
 uselastsettings_boolean=0;
 // Load Vars saved last time
 // may use date and time, keep last 10 or something.... think that is for the future
+previous_param_file=engine_recongui_paramfile_directory+"/"+previous_param_file_name; // path to last settings
+if(!File.exists(previous_param_file)) {
+previous_param_file_name="create_gui_info_imagej_lastsettings_"+scanner+".param"; // last settings param/headfile.
+}
 //previous_param_file_name="create_gui_info_imagej_lastsettings"+scanner+".param"; // last settings param/headfile.
 previous_param_file=engine_recongui_paramfile_directory+"/"+previous_param_file_name; // path to last settings
 //next_param_file=engine_recongui_paramfile_directory+"/"+next_param_file_name; // path to next settings changed this to be set below for better usage when previous param isnt available
@@ -478,6 +509,7 @@ do {
     menuitem=0;
     ignored_menuitems="";
     do {
+	if(debuglevel>=50) { print("substringing "+menulistarray[menuitem]+" "+maxlength_menunumber+".\n"); }
 	menuname=substring(menulistarray[menuitem],maxlength_menunumber);
 	menuname=""+menuname+":"; // make display pretty by put colon on end of menuname before padding
 	while(lengthOf(menuname)<length_of_longest_menuname){ menuname=""+menuname+" "; } // make display pretty by pading end of menuname
@@ -516,7 +548,7 @@ do {
 	  ignored_menuitems=""+ignored_menuitems+menuname+" ";
 	}
 	menuitem++;
-    } while (menuitem<lengthOf(menulistarray));
+    } while (menuitem<lengthOf(menulistarray) && lengthOf(menulistarray[menuitem])>maxlength_menunumber);
     Dialog.addString("optional:\t",optional,80);
     Dialog.addCheckbox("Testmode:\tTest scan WILL NOT be admitted to database and Values are NOT SAVED.",false);
     Dialog.addMessage("Ignored Items:"+ignored_menuitems);
@@ -549,7 +581,7 @@ do {
 	    menuvalarray[arrayindex]=Dialog.getString();//""+menuname+"\t","<NOCHOICESFOUND>",20);
 	} 
 	menuitem++;
-    } while (menuitem<lengthOf(menulistarray));
+    } while (menuitem<lengthOf(menulistarray) && lengthOf(menulistarray[menuitem])>maxlength_menunumber);
     
     optional=Dialog.getString();
     testmodebool=Dialog.getCheckbox();
@@ -604,7 +636,7 @@ do {
 		}
 	    } 
 	    menuitem++;
-	} while (menuitem<lengthOf(menulistarray));	
+	} while (menuitem<lengthOf(menulistarray) && lengthOf(menulistarray[menuitem])>maxlength_menunumber);	
 
 	if(lengthOf(optional)>optional_field_length) {
 	    optionaldisplay=""; 
@@ -628,7 +660,7 @@ do {
 	    menuname=substring(menulistarray[menuitem],maxlength_menunumber);
 	    menuvalarray[arrayindex]="test";
 	    menuitem++;
-	} while (menuitem<lengthOf(menulistarray));
+	} while (menuitem<lengthOf(menulistarray) && lengthOf(menulistarray[menuitem])>maxlength_menunumber);
 	optional="test";
     }
     uselastsettings_boolean=1;
@@ -665,7 +697,7 @@ for(modenum=0;modenum<2;modenum++ ) {
 	  paramtexts[modenum]=""+paramtexts[modenum]+menuname+namevalseparators[modenum]+menuvalarray[menuitem]+"\n";
 	}
 	menuitem++;
-    } while (menuitem<lengthOf(menulistarray));
+    } while (menuitem<lengthOf(menulistarray) && lengthOf(menulistarray[menuitem])>maxlength_menunumber);
     //    if (optional!="") { 
     paramtexts[modenum]=""+paramtexts[modenum]+"optional"+namevalseparators[modenum]+optional+"\n"; 
 	//    }
