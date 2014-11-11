@@ -548,7 +548,13 @@ do {
 	  ignored_menuitems=""+ignored_menuitems+menuname+" ";
 	}
 	menuitem++;
-    } while (menuitem<lengthOf(menulistarray) && lengthOf(menulistarray[menuitem])>maxlength_menunumber);
+	loop_process=false;
+	if ( menuitem<lengthOf(menulistarray) ){
+	    if ( lengthOf(menulistarray[menuitem])>maxlength_menunumber ) {
+		loop_process=true;
+	    }
+	}
+    } while (loop_process);
     Dialog.addString("optional:\t",optional,80);
     Dialog.addCheckbox("Testmode:\tTest scan WILL NOT be admitted to database and Values are NOT SAVED.",false);
     Dialog.addMessage("Ignored Items:"+ignored_menuitems);
@@ -581,7 +587,14 @@ do {
 	    menuvalarray[arrayindex]=Dialog.getString();//""+menuname+"\t","<NOCHOICESFOUND>",20);
 	} 
 	menuitem++;
-    } while (menuitem<lengthOf(menulistarray) && lengthOf(menulistarray[menuitem])>maxlength_menunumber);
+	loop_process=false;
+	if ( menuitem<lengthOf(menulistarray) ){
+	    if ( lengthOf(menulistarray[menuitem])>maxlength_menunumber ) {
+		loop_process=true;
+	    }
+	}
+    } while (loop_process);
+    //} while (menuitem<lengthOf(menulistarray) && lengthOf(menulistarray[menuitem])>maxlength_menunumber);
     
     optional=Dialog.getString();
     testmodebool=Dialog.getCheckbox();
@@ -636,7 +649,14 @@ do {
 		}
 	    } 
 	    menuitem++;
-	} while (menuitem<lengthOf(menulistarray) && lengthOf(menulistarray[menuitem])>maxlength_menunumber);	
+	    loop_process=false;
+	    if ( menuitem<lengthOf(menulistarray) ){
+		if ( lengthOf(menulistarray[menuitem])>maxlength_menunumber ) {
+		    loop_process=true;
+		}
+	    }
+	} while (loop_process);
+	//} while (menuitem<lengthOf(menulistarray) && lengthOf(menulistarray[menuitem])>maxlength_menunumber);	
 
 	if(lengthOf(optional)>optional_field_length) {
 	    optionaldisplay=""; 
@@ -660,7 +680,14 @@ do {
 	    menuname=substring(menulistarray[menuitem],maxlength_menunumber);
 	    menuvalarray[arrayindex]="test";
 	    menuitem++;
-	} while (menuitem<lengthOf(menulistarray) && lengthOf(menulistarray[menuitem])>maxlength_menunumber);
+	    loop_process=false;
+	    if ( menuitem<lengthOf(menulistarray) ){
+		if ( lengthOf(menulistarray[menuitem])>maxlength_menunumber ) {
+		    loop_process=true;
+		}
+	    }
+	} while (loop_process);
+	//} while (menuitem<lengthOf(menulistarray) && lengthOf(menulistarray[menuitem])>maxlength_menunumber);
 	optional="test";
     }
     uselastsettings_boolean=1;
@@ -697,7 +724,14 @@ for(modenum=0;modenum<2;modenum++ ) {
 	  paramtexts[modenum]=""+paramtexts[modenum]+menuname+namevalseparators[modenum]+menuvalarray[menuitem]+"\n";
 	}
 	menuitem++;
-    } while (menuitem<lengthOf(menulistarray) && lengthOf(menulistarray[menuitem])>maxlength_menunumber);
+	loop_process=false;
+	if ( menuitem<lengthOf(menulistarray) ){
+	    if ( lengthOf(menulistarray[menuitem])>maxlength_menunumber ) {
+		loop_process=true;
+	    }
+	}
+    } while (loop_process);
+    //} while (menuitem<lengthOf(menulistarray) && lengthOf(menulistarray[menuitem])>maxlength_menunumber);
     //    if (optional!="") { 
     paramtexts[modenum]=""+paramtexts[modenum]+"optional"+namevalseparators[modenum]+optional+"\n"; 
 	//    }
