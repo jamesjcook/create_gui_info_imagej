@@ -35,6 +35,10 @@
 //   ex call: 
 ////////////////////////////////////////////////////////////////////////////////
 
+user_string="_"+getInfo('user.name');
+if (user_string=="_omega") {
+    user_string="";
+}
 
 //getVersion()
 requires(1.45);
@@ -93,7 +97,7 @@ while(lengthOf(second)<2) {second="0"+second;}
 datetimestamp=""+year+month+dayOfMonth+hour+minute+second;
 datetimestamp=""; // We have decided that the date time stamp functionality is bad. It breaks radish_scale_bunch because radish_scale_bunch assumes a param file name, and this changes that name.
 radishdate=""+month+"/"+dayOfMonth+"/"+substring(year,2);
-
+scanner="";
 useageerror=1; //init to usage-error true
 if(lengthOf(arglist)>=2) {
     if (matches(arglist[1],valid_scanner_pattern) && lengthOf(arglist)==3 ) { 
@@ -124,7 +128,7 @@ if(lengthOf(arglist)>=2) {
 	    mode="inline";
 	    menu_file=arglist[1];
 	    scanner=arglist[2]; // exptcted as scanner name or tesla.
-	    previous_param_file_name="create_gui_info_imagej_lastsettings_"+scanner+".param"; // last settings param/headfile.
+	    previous_param_file_name="create_gui_info_imagej_lastsettings_"+scanner+user_string+".param"; // last settings param/headfile.
 	    next_param_file_name=previous_param_file_name;
 	    modemessage="Function mode: "+mode+" - This is called during recon.";
 	    //	    debuglevel=100;
@@ -150,6 +154,7 @@ if(lengthOf(arglist)>=2) {
 	}
     } 
 }
+
 if (useageerror==1) {
     args="";
     argcount=lengthOf(arglist)-1;
@@ -253,6 +258,7 @@ if(debuglevel>=50) {
     print("scanner:                  "+scanner);
     print("previous_param_file_name: "+previous_param_file_name);
 }
+
 //radish settings
 if(File.exists(""+engine_dependency_filepath)) {
     enginesettings=File.openAsString(""+engine_dependency_filepath);
@@ -285,6 +291,11 @@ if ( debuglevel >= 45 ) {
     print("engine_work_directory:               "+engine_work_directory);
     print("engine_archive_tag_directory:        "+engine_archive_tag_directory);
     }
+
+// define our favored defaults.
+scanner_param_file_name="create_gui_info_imagej_lastsettings_"+scanner+".param"; // last settings param/headfile.
+scanner_user_param_file_name="create_gui_info_imagej_lastsettings_"+scanner+user_string+".param"; // last settings param/headfile.
+
 //recon_menu.txt
 reconmenucomments="";
 menuliststring="";        // semi-colon seperated string for each menuname type. with index prepended to name
@@ -411,10 +422,13 @@ uselastsettings_boolean=0;
 // Load Vars saved last time
 // may use date and time, keep last 10 or something.... think that is for the future
 previous_param_file=engine_recongui_paramfile_directory+"/"+previous_param_file_name; // path to last settings
-if(!File.exists(previous_param_file)) {
-previous_param_file_name="create_gui_info_imagej_lastsettings_"+scanner+".param"; // last settings param/headfile.
+if(!File.exists(previous_param_file)) { // desired previous didnt exist, try scanner user
+    previous_param_file_name=scanner_user_param_file_name;
 }
-//previous_param_file_name="create_gui_info_imagej_lastsettings"+scanner+".param"; // last settings param/headfile.
+previous_param_file=engine_recongui_paramfile_directory+"/"+previous_param_file_name; // path to last settings
+if(!File.exists(previous_param_file)) { // desired previous didnt exist, scanner user didnt exiet, try scanner
+    previous_param_file_name=scanner_param_file_name;
+}
 previous_param_file=engine_recongui_paramfile_directory+"/"+previous_param_file_name; // path to last settings
 //next_param_file=engine_recongui_paramfile_directory+"/"+next_param_file_name; // path to next settings changed this to be set below for better usage when previous param isnt available
 if(File.exists(previous_param_file))
@@ -743,9 +757,11 @@ for(modenum=0;modenum<2;modenum++ ) {
 paramtexts[1]=paramtexts[1]+"\n"; //special line to clean up last line not haveing new line, but we only want to do that for the param file
 
 next_param_file=engine_recongui_paramfile_directory+"/"+different_param_file_name; // path to next settings
+scanner_user_param_file=engine_recongui_paramfile_directory+"/"+scanner_user_param_file_name; // always saving the default
 if(testmodebool==false) {
     //print("param file save to "+next_param_file);
     outval=File.saveString(paramtexts[1],next_param_file); // saves to previous param file, each time, somewhat confusing... but suckit!
+    outval=File.saveString(paramtexts[1],scanner_user_param_file); // saves to previous param file, each time, somewhat confusing... but suckit!
     wait(500);
     print("save out val="+outval);
 }
