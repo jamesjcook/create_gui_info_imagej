@@ -183,30 +183,35 @@ Standard Usage: create_info_gui_imagej scanner new_file_name\
 // if scanner is given as a name instead of a tesla value figure out the scanner dependecny file and load that to get the scanner_tesla
 if ( !matches(scanner,scanner_tesla_pattern) && mode !="getvalidargs" ) {
     getscannertesla=1;
-
+    dep_postfixes=newArray("_dependencies","_radish_dependencies");
+    for(i=0;i<lengthOf(dep_postfixes);i++){
+	dep_postfix=dep_postfixes[i];
     // handle old style scanner_deps
     RADISH_RECON_DIR=File.getParent(engine_dependency_filepath);   // pull main recondir from the engine_dependency_filepathpath
-    scanner_dependency_filename="scanner_"+scanner+"_radish_dependencies";
+    scanner_dependency_filename="scanner_"+scanner+dep_postfix;
     scanner_dependency_filepath=""+RADISH_RECON_DIR+"/"+scanner_dependency_filename;
 
     //try new style scanner_deps
     if ( ! File.exists(scanner_dependency_filepath) ) { // try oldschool paths.
 	if(debuglevel>=25 ){ print("file not found: "+scanner_dependency_filepath); }
 	RADISH_RECON_DIR=File.getParent(RADISH_RECON_DIR)+"//scanner_deps";   // pull main recondir from the engine_dependency_filepathpath
-	scanner_dependency_filename="scanner_"+scanner+"_radish_dependencies";
+	scanner_dependency_filename="scanner_"+scanner+dep_postfix;
 	scanner_dependency_filepath=""+RADISH_RECON_DIR+"//"+scanner_dependency_filename;
 	
     }
     if ( ! File.exists(scanner_dependency_filepath) ) { // try oldschool paths.
 	if(debuglevel>=25 ){ print("file not found: "+scanner_dependency_filepath); }
 	RADISH_RECON_DIR=File.getParent(RADISH_RECON_DIR)+"\\scanner_deps";   // pull main recondir from the engine_dependency_filepathpath
-	scanner_dependency_filename="scanner_"+scanner+"_radish_dependencies";
+	scanner_dependency_filename="scanner_"+scanner+dep_postfix;
 	scanner_dependency_filepath=""+RADISH_RECON_DIR+"\\"+scanner_dependency_filename;
     }
     if ( ! File.exists(scanner_dependency_filepath) ) { // try oldschool paths.
     //if(debuglevel>=5 ){
     print("file not found: "+scanner_dependency_filepath);
 	//};
+    } else {
+	break;
+    }
     }
 
 } else {
